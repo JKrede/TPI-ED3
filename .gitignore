@@ -60,6 +60,15 @@
 *.gz
 -converted-to.* # Regla para ignorar archivos de imagen convertidos (epstopdf)
 
+## CMake
+
+# Archivos de caché y configuración
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
 # ===============================================
 # Archivos temporales y de sistema comunes
 # ===============================================
