@@ -1,0 +1,73 @@
+# ===============================================
+# Archivos de codigo C/C++ (Generales)
+# ===============================================
+# Archivos objeto de compilacion
+*.o
+*.obj
+*.ko
+*.mod.o
+
+# Binarios/Ejecutables generados
+*.axf
+*.bin
+*.out
+*.exe
+
+# Archivos de libreria estaticas y dinamicas
+*.a
+*.lib
+*.so
+*.dll
+
+# Archivos de mapa y depuracion
+*.map
+*.su
+*.d
+
+# ===============================================
+# Archivos generados por LaTeX/PDF
+# ===============================================
+## Archivos auxiliares principales de LaTeX/pdflatex
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+*.lb
+*.bbl
+*.bcf
+*.blg
+*.idx
+*.ind
+*.ilg
+*.toc
+*.snm
+*.nav
+*.vrb
+
+## Archivos de salida
+*.pdf
+*.dvi
+
+## Archivos de sincronizacion y otros temporales
+*.synctex.gz
+*.gz
+-converted-to.* # Regla para ignorar archivos de imagen convertidos (epstopdf)
+
+# ===============================================
+# Archivos temporales y de sistema comunes
+# ===============================================
+*~
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.stackdump
