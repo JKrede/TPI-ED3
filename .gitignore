@@ -52,7 +52,7 @@
 *.vrb
 
 ## Archivos de salida
-*.pdf
+Informe.pdf
 *.dvi
 
 ## Archivos de sincronizacion y otros temporales
