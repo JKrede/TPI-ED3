@@ -25,7 +25,7 @@
 		\\[2em]
 		TRABAJO PRACTICO INTEGRADOR
 		\\[2em]
-		\textbf{"SISTEMA DE ADQUISICIÓN, CONVERSIÓN, PROCESAMIENTO Y VISUALIZACIÓN DE UNA SEÑAL DE ELECTROCARDIOGRAMA"}
+		\textbf{"SISTEMA DE ADQUISICIÓN, CONVERSIÓN Y PROCESAMIENTO DE UNA SEÑAL DE ELECTROCARDIOGRAMA"}
 		\\[2em]
 		Grupo Nº 10 \\[1.5em]
 		Alumnos:\\[0.25em]
@@ -51,9 +51,19 @@
 	%IMPORTANTE: Descomentar secciones a medida que se vayan implementado
 	%---------------------------------------------------------------------
 	
-	%\section{Proyecto}
+	\section{Proyecto}
+	El presente Trabajo Práctico Integrador describe la implementación de un Sistema de Adquisición, Conversión y Procesamiento de una señal de Electrocardiograma (ECG), específicamente correspondiente a la Derivación II, destinado al monitoreo en tiempo real de la actividad eléctrica cardíaca.
 	
+	La señal cardíaca es obtenida del paciente y dirigida al subsistema de adquisición y acondicionamiento de Señal (SSE 2.1) dado que la señal ECG presenta amplitudes del orden de los milivoltios y es altamente susceptible al ruido, esta etapa permite amplificar, filtrar y adecuar la señal antes de su posterior digitalización. Una vez acondicionada, la señal es transferida al sistema microcontrolador LPC1769 (SSEP.2.2), el cuál realiza la conversión analógico-digital y el procesamiento correspondiente para obtener una representación digital estable y útil.
+	
+	Posteriormente, la señal procesada es remitida al subsistema de comunicación de datos (SSE.2.3) para ser enviada a una computadora, donde puede ser observada en tiempo real. El sistema incorpora un subsistema de señalización acústica (SSE.4.2) destinada a emitir un pulso audible simulando cada latido detectado en la señal ECG y ademas funcionar como alarma técnica en el caso de no detectar pulsaciones. El sistema ademas incorpora un subsistema de señalización visual (SSE.4.1) que se activa en el caso de que se detecta una cantidad de pulsaciones por minuto mayor o menor a valores umbrales establecidos previamente en el sistema microcontrolador.
 		
+	\begin{figure}[htbp]
+		\centering
+		\includegraphics[width=1\textwidth]{img/Diagrama-de-bloques.pdf}
+		\caption{Diagrama de bloques del sistema}
+		\label{fig:diagrama-de-bloques}
+	\end{figure}
 	
 	%\section{Descripción del Sistema Electrónico Programable}
 	
