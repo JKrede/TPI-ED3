@@ -17,7 +17,6 @@
 *.a
 *.lib
 *.so
-*.dll
 
 # Archivos de mapa y depuracion
 *.map
