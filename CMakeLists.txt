@@ -7,5 +7,6 @@ project(
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(${CMAKE_SOURCE_DIR}/CMSISv2p00_LPC17xx/Drivers/inc)
+include_directories(${CMAKE_SOURCE_DIR}/inc)
 
 add_executable(main src/main.c)
