@@ -46,4 +46,5 @@ void configPCB(void);
 void configGPIO(void);
 void configADC(void);
 void configUART(void);
-void configGPDMA(void);
+void configGPDMA_ADC(void);
+void configGPDMA_UART(void);

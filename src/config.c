@@ -98,19 +98,14 @@ void configUART(void) {
 }
 
 /**
- * @brief Configura el modulo de GPDMA para funcionar con los modulos ADC y UART
+ * @brief Configura el modulo de GPDMA para funcionar con el modulo ADC
+ *
+ * @note: Recordar habilitar el canal correspondiente
  */
-void configGPDMA(void) {
+void configGPDMA_ADC(void) {
 
   GPDMA_Channel_CFG_Type dmaADC = {0};
-  GPDMA_Channel_CFG_Type dmaUART = {0};
-
   GPDMA_LLI_Type lliADC = {0};
-  GPDMA_LLI_Type lliUART = {0};
-
-  // Linked lists configuradas de igual manera que sus correspondientes
-  // configuraciones de dma con el fin de reutilizar el espacio de memoria
-  // destinado al almacemamiento de las muestras
 
   lliADC.srcAddr = (uint32_t)(uintptr_t)&LPC_ADC->ADGDR;
   lliADC.dstAddr = (uint32_t)BANK0_START;
@@ -119,19 +114,33 @@ void configGPDMA(void) {
                    (GPDMA_BSIZE_4 << 15) | (GPDMA_WORD << 18) |
                    (GPDMA_WORD << 21) | (1 << 27) | (1 << 31);
 
-  lliUART.srcAddr = (uint32_t)BANK0_START;
-  lliUART.dstAddr = ((uint32_t)(uintptr_t)&LPC_UART0->THR);
-  lliUART.nextLLI = (uint32_t)(uintptr_t)&lliUART;
-  lliUART.control = (CANT_MUESTRAS << 0) | (GPDMA_BSIZE_1 << 12) |
-                    (GPDMA_BSIZE_1 << 15) | (GPDMA_BYTE << 18) |
-                    (GPDMA_BYTE << 21) | (1 << 26) | (1 << 31);
-
   dmaADC.channelNum = GPDMA_CHANNEL_ADC;
   dmaADC.srcConn = GPDMA_ADC;
   dmaADC.dstMemAddr = (uint32_t)BANK0_START;
   dmaADC.transferType = GPDMA_P2M;
   dmaADC.transferSize = (uint32_t)CANT_MUESTRAS;
   dmaADC.linkedList = (uint32_t)(uintptr_t)&lliADC;
+
+  GPDMA_Setup(&dmaADC);
+  NVIC_EnableIRQ(DMA_IRQn);
+}
+
+/**
+ * @brief Configura el modulo de GPDMA par funcionar con el modulo UART
+ *
+ * @note: Recordar habilitar el canal correspondiente
+ */
+void configGPDMA_UART(void) {
+
+  GPDMA_Channel_CFG_Type dmaUART = {0};
+  GPDMA_LLI_Type lliUART = {0};
+
+  lliUART.srcAddr = (uint32_t)BANK0_START;
+  lliUART.dstAddr = ((uint32_t)(uintptr_t)&LPC_UART0->THR);
+  lliUART.nextLLI = (uint32_t)(uintptr_t)&lliUART;
+  lliUART.control = (CANT_MUESTRAS << 0) | (GPDMA_BSIZE_1 << 12) |
+                    (GPDMA_BSIZE_1 << 15) | (GPDMA_BYTE << 18) |
+                    (GPDMA_BYTE << 21) | (1 << 26) | (1 << 31);
 
   dmaUART.channelNum = GPDMA_CHANNEL_UART;
   dmaUART.srcMemAddr = (uint32_t)BANK0_START;
@@ -140,7 +149,6 @@ void configGPDMA(void) {
   dmaUART.transferSize = (uint32_t)CANT_MUESTRAS;
   dmaUART.linkedList = (uint32_t)(uintptr_t)&lliUART;
 
-  GPDMA_Init();
-  GPDMA_Setup(&dmaADC);
   GPDMA_Setup(&dmaUART);
+  NVIC_EnableIRQ(DMA_IRQn);
 }
