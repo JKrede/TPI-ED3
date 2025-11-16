@@ -32,7 +32,7 @@ int main() {
     if (muestras_listas) {
       contarPulsos((uint32_t *)BANK0_START, &ppm);
       muestras_listas = 0;
-      uint32_t mr_load = (ppm * 1000 * 2) / 60; // Resolver magic numbers
+      uint32_t mr_load = (ppm * 1000) / (60 * 2); // Resolver magic numbers
       TIM_UpdateMatchValue(LPC_TIM2, TIMER_CHANNEL_2, mr_load);
       configGPDMA_UART();
       GPDMA_ChannelCmd(GPDMA_CHANNEL_UART, ENABLE);

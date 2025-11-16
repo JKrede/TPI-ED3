@@ -6,7 +6,7 @@
  * ppm
  *
  * @param[in] reg_adc Puntero a la memoria que almacena las muestras
- * @param[out] lpm Puntero al registro que almacena el valor de ppm actual
+ * @param[out] ppm Puntero al registro que almacena el valor de ppm actual
  */
 void contarPulsos(const uint32_t *muestras, uint8_t *ppm) {
 
