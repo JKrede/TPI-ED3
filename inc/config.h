@@ -44,6 +44,11 @@
 #define TIMER_PS_1MS 1000
 #define TIMER_60S 60000
 #define TIMER_CHANNEL_0 0
+// Ecuacion del Match Value
+#define TOGGLE_TIME (TIMER_PS_1MS / (60 * 2)) 
+/*--- (Se divide por 60 segundos y 2 ciclos del toggle) y todo se multiplica por ppm ---*/
+
+
 // Timer para hacer funcionar el buzzer
 #define TIMER_CHANNEL_2 2
 
