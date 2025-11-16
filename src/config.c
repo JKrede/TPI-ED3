@@ -181,7 +181,7 @@ void configGPDMA_UART(void) {
   GPDMA_Channel_CFG_Type dmaUART = {0};
   GPDMA_LLI_Type lliUART = {0};
 
-  lliUART.srcAddr = (uint32_t)BANK0_START;
+  lliUART.srcAddr = (uint32_t)BANK0_MUESTRAS;
   lliUART.dstAddr = ((uint32_t)(uintptr_t)&LPC_UART0->THR);
   lliUART.nextLLI = (uint32_t)(uintptr_t)&lliUART;
   lliUART.control = (CANT_MUESTRAS << 0) | (GPDMA_BSIZE_1 << 12) |
@@ -189,7 +189,7 @@ void configGPDMA_UART(void) {
                     (GPDMA_BYTE << 21) | (1 << 26) | (1 << 31);
 
   dmaUART.channelNum = GPDMA_CHANNEL_UART;
-  dmaUART.srcMemAddr = (uint32_t)BANK0_START;
+  dmaUART.srcMemAddr = (uint32_t)BANK0_MUESTRAS;
   dmaUART.dstConn = GPDMA_UART0_Tx;
   dmaUART.transferType = GPDMA_M2P;
   dmaUART.transferSize = (uint32_t)CANT_MUESTRAS;

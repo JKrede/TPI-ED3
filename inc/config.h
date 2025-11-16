@@ -1,8 +1,9 @@
 // CONFIGURACION DEL SISTEMA
-#include <stdint.h>
 #define BANK0_START 0x2007C000
+#define BANK0_MUESTRAS 0x2007C800
 
 #define CANT_MUESTRAS 2048 // CANT_MUESTRAS DEBE SER < 4096
+
 #define PPM_UMBRAL_MAX 180
 #define PPM_UMBRAL_MIN 30
 // Valor umbral para identificar el R-Peak. Valor ajustable
