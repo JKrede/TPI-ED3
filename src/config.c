@@ -58,7 +58,7 @@ void configADC(void) {
   ADC_ChannelCmd(ADC_CHANNEL_0, ENABLE);
   ADC_EdgeStartConfig(ADC_START_ON_RISING);
   ADC_IntConfig(ADC_CHANNEL_0, ENABLE); // Necesario para funcionar con GPDMA
-  NVIC_EnableIRQ(ADC_IRQn);
+
 }
 
 /**

@@ -58,14 +58,14 @@
 	#define FREQ_MUESTREO 1000 // En Hz
 
 	// CONFIGURACION UART
-	#define BAUD_RATE 10000
+	#define BAUD_RATE 9600
 
 	// CONFIGURACION GPDMA
 	#define GPDMA_CHANNEL_ADC 0
 	#define GPDMA_CHANNEL_UART 1
 
 	// PROTOTIPOS
-	#define TX_BUFFER_SIZE 1024
+	#define TX_BUFFER_SIZE 1000
 	void configPCB(void);
 	void configADC(void);
 	void configUART(void);
