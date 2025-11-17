@@ -22,10 +22,19 @@ static GPDMA_Channel_CFG_Type dmaUART = {0};
  * @brief Configura pines
  */
 void configPCB(void) {
-
+  PINSEL_CFG_Type cfgPinBuzzer = {0};
+  PINSEL_CFG_Type cfgPinLed = {0};
   PINSEL_CFG_Type cfgADC = {0};
   PINSEL_CFG_Type cfg_TX_UART = {0};
   PINSEL_CFG_Type cfg_RX_UART = {0};
+
+  cfgPinBuzzer.portNum = PORT_BUZZER;
+  cfgPinBuzzer.pinNum = PIN_BUZZER;
+  cfgPinBuzzer.funcNum = FUNC_EXTMAT;
+
+  cfgPinLed.portNum = PORT_LED;
+  cfgPinLed.pinNum = PIN_LED;
+  cfgPinLed.funcNum = FUNC_GPIO;
 
   cfgADC.portNum = PORT_ADC;
   cfgADC.pinNum = PIN_ADC;
@@ -41,6 +50,8 @@ void configPCB(void) {
   cfg_RX_UART.funcNum = FUNC_RX_UART2;
   cfg_RX_UART.pinMode = PINSEL_TRISTATE;
 
+  PINSEL_ConfigPin(&cfgPinBuzzer);
+  PINSEL_ConfigPin(&cfgPinLed);
   PINSEL_ConfigPin(&cfgADC);
   PINSEL_ConfigPin(&cfg_TX_UART);
   PINSEL_ConfigPin(&cfg_RX_UART);
@@ -56,24 +67,56 @@ void configGPIO(void) {
 }
 
 /**
- * @brief Configura el modulo ADC para funcionar con el modulo de GPDMA
+ * @brief Configura el timer asociado al buzzer.
+ *
+ * @param matVal Valor de Match register(MR) a establecer
+ *
+ * @note: El valor a cargar en MR es (ppm/60)*1000*2
  */
-void configADC(void) {
+void configTimerBuzzer(uint32_t matVal) {
 
-  ADC_Init(2000);
-  ADC_BurstCmd(DISABLE);
-  ADC_StartCmd(ADC_START_ON_MAT01);
-  ADC_ChannelCmd(ADC_CHANNEL_0, ENABLE);
-  ADC_EdgeStartConfig(ADC_START_ON_RISING);
-  ADC_IntConfig(ADC_CHANNEL_0, ENABLE); // Necesario para funcionar con GPDMA
+  TIM_TIMERCFG_Type tim_extmat = {0};
+  TIM_MATCHCFG_Type mat_extmat = {0};
+
+  tim_extmat.prescaleOption = TIM_USVAL;
+  tim_extmat.prescaleValue = TIMER_PS_1MS;
+
+  mat_extmat.matchChannel = TIMER_CHANNEL_0;
+  mat_extmat.intOnMatch = DISABLE;
+  mat_extmat.resetOnMatch = ENABLE;
+  mat_extmat.stopOnMatch = DISABLE;
+  mat_extmat.extMatchOutputType = TIM_TOGGLE;
+  mat_extmat.matchValue = matVal;
+
+  TIM_ConfigStructInit(TIM_TIMER_MODE, &tim_extmat);
+  TIM_ConfigMatch(LPC_TIM1, &mat_extmat);
 }
 
 /**
- * @brief
+ * @brief Configura el timer destinado a interrumpir cada 1 minuto para
+ * establecer la cantidad de ppm (pulsos por minuto)
+ */
+void configTimerPPM(void) {
+
+  TIM_TIMERCFG_Type tim_min = {0};
+  TIM_MATCHCFG_Type match_min = {0};
+
+  tim_min.prescaleOption = TIM_USVAL;
+  tim_min.prescaleValue = TIMER_PS_1MS;
+
+  match_min.matchChannel = TIMER_CHANNEL_0;
+  match_min.matchValue = TIMER_60S; // 60000 ms = 60 s
+  match_min.intOnMatch = ENABLE;
+  match_min.resetOnMatch = ENABLE;
+  match_min.stopOnMatch = ENABLE;
+
+  TIM_ConfigStructInit(TIM_TIMER_MODE, &tim_min);
+  TIM_ConfigMatch(LPC_TIM2, &match_min);
+}
+
+/**
+ * @brief Configura el timer del ADC para realizar el muestreo
  *
- * @param
- *
- * @note
  */
 void configTimerADC(void) {
 
@@ -94,6 +137,18 @@ void configTimerADC(void) {
   TIM_ConfigMatch(LPC_TIM0, &mat_adc);
 
   TIM_Cmd(LPC_TIM0, ENABLE);
+}
+/**
+ * @brief Configura el modulo ADC
+ */
+void configADC(void) {
+
+  ADC_Init(2000);
+  ADC_BurstCmd(DISABLE);
+  ADC_StartCmd(ADC_START_ON_MAT01);
+  ADC_ChannelCmd(ADC_CHANNEL_0, ENABLE);
+  ADC_EdgeStartConfig(ADC_START_ON_RISING);
+  ADC_IntConfig(ADC_CHANNEL_0, ENABLE);
 }
 
 /**
@@ -125,9 +180,8 @@ void configUART(void) {
 /**
  * @brief Configura el modulo de GPDMA par funcionar con el modulo UART
  *
- * @note: Recordar habilitar el canal correspondiente
  */
-void configGPDMA_UART(uint8_t *txBuffer) {
+void configGPDMA_UART(volatile uint8_t *txBuffer) {
 
   GPDMA_Init(); // habilita el controlador DMA
 
@@ -143,7 +197,7 @@ void configGPDMA_UART(uint8_t *txBuffer) {
   NVIC_EnableIRQ(DMA_IRQn);
 }
 
-void startUART_DMA(uint8_t *buffer, uint8_t *dmaUartBusy) {
+void startUART_DMA(uint8_t *buffer, volatile uint8_t *dmaUartBusy) {
 
   // Configuramos el LLI para este bloque
   lliUART.srcAddr = (uint32_t)(uintptr_t)buffer;
