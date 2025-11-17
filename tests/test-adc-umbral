@@ -1,0 +1,71 @@
+#include "LPC17xx.h"
+#include "lpc17xx_adc.h"
+#include "lpc17xx_gpio.h"
+#include "config.h"
+#include <stdint.h>
+
+/* Umbral del ADC en cuentas (12 bits, 0 es 0V a  4095 que es 3.3V)
+ * Por ahora: umbral a mitad de rango (~1.65 V, Vref = 3.3 V)
+ */
+
+#define ADC_UMBRAL    2048U  //4095/2
+
+/* Delay por software */
+static void delay_ms(uint32_t ms) {
+    for (uint32_t i = 0; i < ms * 20000; i++) {
+        __NOP();
+    }
+}
+
+/* Lee una conversion del ADC desde ADGDR y devuelve los 12 bits de resultado.
+ 
+ * ADGDR :
+ *  - bit 31: DONE (1 = conversion lista)
+ *  - bits 15:4: RESULT (12 bits de la conversion)
+ */
+
+static uint16_t adc_read_result(void) {
+    uint32_t adgdr_;
+    /* Espera a DONE = 1 */
+    do {
+        adgdr_ = LPC_ADC->ADGDR;
+    } while (((adgdr_ >> 31) & 0x01U) == 0U);
+
+    /* Extraer bits 15:4 */
+    uint16_t resultado = (uint16_t)((adgdr_ >> 4) & 0x0FFFU);
+
+    return resultado;   //va el void??
+}
+
+/* 
+   - Si resultado > umbral: LED ON
+   - Si resultado <= umbral: LED OFF
+ */
+static void led_toggle(uint16_t resultado) {
+
+    if (resultado > ADC_UMBRAL) {
+        GPIO_SetPins(PORT_LED, BIT_VALUE(PIN_LED));
+    } else {
+        GPIO_ClearPins(PORT_LED, BIT_VALUE(PIN_LED));
+    }
+}
+
+int main(void) {
+
+    configPCB();   // Configura P0.23 como ADC, LED como GPIO
+    configGPIO();  // LED como salida, apagados
+    configADC();   
+
+    while (1) {
+
+        /* Lee una muestra del ADC (12 bits) */
+        uint16_t resultado = adc_read_result();
+
+        /* Actualiza LED */
+        led_toggle(resultado);
+
+        /* Delay para que el LED no titile demasiado rápido */
+        delay_ms(10);
+    }
+    return 0;
+}
