@@ -65,39 +65,57 @@
 		\label{fig:diagrama-de-bloques}
 	\end{figure}
 	
-	%\section{Descripción del Sistema Electrónico Programable}
+	\newpage
 	
+	\section{Descripción del Sistema Electrónico Programable}
 	
+	El Sistema Electrónico programable (SEP) adquiere la señal ECG mediante un cable paciente con tres derivaciones. La señal captada se envía a un circuito de acondicionamiento donde se amplifica y se atenúan los componentes de ruido mediante un amplificador de instrumentación con rechazo de modo común, utilizando la pierna derecha como referencia.
 	
-	%\section{Desarrollo del hardware}
+	Posteriormente, la señal acondicionada se digitaliza a través del conversor analógico–digital del LPC1769. En el software se aplica un filtrado IIR (Infinite Impulse Response) para atenuar la interferencia de 50 Hz proveniente de la red eléctrica. A partir de la señal filtrada se reduce la resolución de 12 a 8 bits para su transmisión a una computadora mediante el módulo de comunicación de datos, donde es visualizada por un software que interpreta las muestras recibidas.
 	
-	%\subsection{Circuito del Subsistema electrónico programable microcontrolador}
+	Además, el sistema estima la frecuencia cardíaca en pulsos por minuto. Con este valor se acciona un buzzer que reproduce auditivamente el ritmo cardíaco y se activa un LED de alerta cuando la frecuencia medida supera los 180 ppm o desciende por debajo de 30 ppm.
 	
-	%\subsection{Circuito del Subsistema electrónico de señalización óptico y acústico}
+	*foto*
 	
-	%\subsection{Circuito del Subsistema electrónico de visualización de datos}
+	\newpage
 	
-	%\subsection{Circuito del Subsistema electrónico de entrada de datos}
+	%---------------------------------------------------------------------
+	%Desarrollo del hardware
+	%---------------------------------------------------------------------
 	
-	%\subsection{Circuito del Subsistema electrónico de adquisición de señales}
+	\section{Desarrollo del hardware}
+	
+	%\subsection{Desarrollo del SSE de adquisición y acondicionamiento de la señal}
+	%AQUI JF DEBERIA PASTEAR SU EXPLICACION DE OTRO PROYECTO
+	%\subsubsection{Circuito del Subsistema electrónico de adquisición}
+	%PONER QUE USAMOS UN CABLE PACIENTE???
+	%\subsubsection{Circuito del Subsistema electrónico de acondicionamiento}
+	
+	%\subsection{Circuito del Subsistema electrónico de procesamiento}
+	
+	%\subsubsection{Circuito del Subsistema electrónico programable LPC1769}
+	
+	%\subsubsection{Circuito del Subsistema electrónico de comunicación de datos}
 	
 	%\subsection{Circuito del Subsistema electrónico de comunicación de datos}
 	
-	
+	%---------------------------------------------------------------------
+	%Desarrollo del firmware
+	%---------------------------------------------------------------------
 	
 	%\section{Desarrollo del firmware}
 	
-	%\subsection{Firmware del Subsistema electrónico de señalización óptico y acústico}
+	%\subsection{Firmware del Subsistema de adquisición de señales}
+	
+	%\subsection{Firmware del subsustema de filtrado IIR}
+	
+	%\subsection{Firmware del Subsistema electrónico de señalización óptico}
+	
+	%\subsection{Firmware del Subsistema electrónico de señalización acústico}
 	
 	%\subsection{Firmware del Subsistema electrónico de visualización de datos}
 	
-	%\subsection{Firmware del Subsistema electrónico de entrada de datos}
-	
-	%\subsection{Firmware del Subsistema electrónico de adquisición de señales}
-	
 	%\subsection{Firmware del Subsistema electrónico de comunicación de datos}
-	
-	
 	
 	%\section{Pruebas del sistema}
 	
