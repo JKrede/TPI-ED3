@@ -65,7 +65,7 @@
 	#define GPDMA_CHANNEL_UART 1
 
 	// PROTOTIPOS
-	#define TX_BUFFER_SIZE 1000
+	#define TX_BUFFER_SIZE 2048
 	void configPCB(void);
 	void configADC(void);
 	void configUART(void);
