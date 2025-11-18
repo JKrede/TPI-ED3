@@ -88,7 +88,7 @@ void configTimerBuzzer(uint32_t matVal) {
   mat_extmat.extMatchOutputType = TIM_TOGGLE;
   mat_extmat.matchValue = matVal;
 
-  TIM_ConfigStructInit(TIM_TIMER_MODE, &tim_extmat);
+  TIM_Init(LPC_TIM1, TIM_TIMER_MODE, &tim_extmat);
   TIM_ConfigMatch(LPC_TIM1, &mat_extmat);
 }
 
@@ -108,9 +108,9 @@ void configTimerPPM(void) {
   match_min.matchValue = TIMER_60S; // 60000 ms = 60 s
   match_min.intOnMatch = ENABLE;
   match_min.resetOnMatch = ENABLE;
-  match_min.stopOnMatch = ENABLE;
+  match_min.stopOnMatch = DISABLE;
 
-  TIM_ConfigStructInit(TIM_TIMER_MODE, &tim_min);
+  TIM_Init(LPC_TIM2, TIM_TIMER_MODE, &tim_min);
   TIM_ConfigMatch(LPC_TIM2, &match_min);
 }
 
@@ -151,21 +151,34 @@ void configADC(void) {
   ADC_IntConfig(ADC_CHANNEL_0, ENABLE);
 }
 
-/**
- * @brief Configura el modulo UART para funcionar con el modulo de GPDMA
- */
 void configUART(void) {
 
   UART_CFG_Type cfgUART2;
   UART_FIFO_CFG_Type cfgFIFO;
 
+  LPC_SC->PCONP |= (1 << 24);
+  LPC_SC->PCLKSEL1 &= ~(3 << 16); // CCLK/4
+
   UART_ConfigStructInit(&cfgUART2);
-  cfgUART2.Baud_rate = BAUD_RATE;
+  cfgUART2.Baud_rate = 115200; // BAUD_RATE;
   cfgUART2.Parity = UART_PARITY_NONE;
   cfgUART2.Databits = UART_DATABIT_8;
   cfgUART2.Stopbits = UART_STOPBIT_1;
 
   UART_Init(LPC_UART2, &cfgUART2);
+
+  /*-------Override manual--------
+   * DL = 12, DIVADDVAL=2, MULVAL=15
+   * Baud = 114889 bps (error porcentual del 0,27%)*/
+  uint8_t lcr = LPC_UART2->LCR;
+
+  LPC_UART2->LCR = lcr | (1 << 7); // Divisor Latch Access Bit=1
+  // Habilitado para escribir en DLL y DLM/
+  LPC_UART2->DLL = 12;            // DL=12
+  LPC_UART2->DLM = 0;             // DL=12
+  LPC_UART2->FDR = (15 << 4) | 2; // Mulval y divaddval
+  // Deshabilito para usar la UART normalmente/
+  LPC_UART2->LCR = lcr & ~(1 << 7); // DLAB=0 ()
 
   UART_FIFOConfigStructInit(&cfgFIFO);
   cfgFIFO.FIFO_DMAMode = ENABLE;
@@ -176,7 +189,6 @@ void configUART(void) {
 
   UART_TxCmd(LPC_UART2, ENABLE);
 }
-
 /**
  * @brief Configura el modulo de GPDMA par funcionar con el modulo UART
  *
