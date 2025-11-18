@@ -4,10 +4,33 @@
 \usepackage{graphicx}
 \usepackage{blindtext} 
 \usepackage{fancyhdr}
+\usepackage{tikz}
+\usepackage{subcaption} % Recomendado
+\usetikzlibrary{calc}
+\usepackage{tabularx}
 \usepackage{float}
+\usepackage{pdflscape}
+
+\usepackage{minted}
+\usemintedstyle{colorful}
+
 \usepackage[colorlinks=true, linkcolor=black, urlcolor=blue]{hyperref}
 \usepackage[a4paper,top=2.54cm,bottom=2.54cm,left=3.18cm,right=3.18cm]{geometry}
+\usepackage[section]{placeins}
+\makeatletter
+\let\oldsubsection\subsection
+\renewcommand{\subsection}{\FloatBarrier\oldsubsection}
+\let\oldsubsubsection\subsubsection
+\renewcommand{\subsubsection}{\FloatBarrier\oldsubsubsection}
+\makeatother
 
+
+%--Config para la tabla--%
+\usepackage[table]{xcolor}
+\usepackage{array}
+% Columna centrada en horizontal y vertical
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
+%----%
 
 % Portada del informe
 \newgeometry{top=1.5cm, bottom=2.5cm, left=3cm, right=3cm}
@@ -34,9 +57,9 @@
 		Krede, Julián \\[0.25em]
 		Soria, Francisco \\[2em]
 		Profesor:\\[0.25em]
-		Migliore, Emiliano Elvio \\[2em]
+		Ing. Migliore, Emiliano Elvio \\[2em]
 		Comisión Nº 3\\[1em]
-		20 de Noviembre de 2025
+		\today
 	\end{center}
 	\restoregeometry
 	% Fin portada del informe
@@ -44,71 +67,869 @@
 	\newpage
 	%Pagina de indices
 	\tableofcontents
-
+	
 	\newpage 
 	
 	%---------------------------------------------------------------------
 	%IMPORTANTE: Descomentar secciones a medida que se vayan implementado
 	%---------------------------------------------------------------------
 	
+	
+	\newpage
 	\section{Proyecto}
 	El presente Trabajo Práctico Integrador describe la implementación de un Sistema de Adquisición, Conversión y Procesamiento de una señal de Electrocardiograma (ECG), específicamente correspondiente a la Derivación II, destinado al monitoreo en tiempo real de la actividad eléctrica cardíaca.
 	
-	La señal cardíaca es obtenida del paciente y dirigida al subsistema de adquisición y acondicionamiento de Señal (SSE 2.1) dado que la señal ECG presenta amplitudes del orden de los milivoltios y es altamente susceptible al ruido, esta etapa permite amplificar, filtrar y adecuar la señal antes de su posterior digitalización. Una vez acondicionada, la señal es transferida al sistema microcontrolador LPC1769 (SSEP.2.2), el cuál realiza la conversión analógico-digital y el procesamiento correspondiente para obtener una representación digital estable y útil.
+	La señal cardíaca es obtenida del paciente y dirigida al subsistema de adquisición y acondicionamiento de Señal (SSE 2.1) dado que la señal ECG presenta amplitudes del orden de los milivoltios y es altamente susceptible al ruido, esta etapa permite amplificar, filtrar y adecuar la señal antes de su posterior digitalización. Una vez acondicionada, la señal es transferida al sistema microcontrolador LPC1769 (SSEP.2.2), el cual realiza la conversión analógico-digital y el procesamiento correspondiente para obtener una representación digital estable y útil.
 	
-	Posteriormente, la señal procesada es remitida al subsistema de comunicación de datos (SSE.2.3) para ser enviada a una computadora, donde puede ser observada en tiempo real. El sistema incorpora un subsistema de señalización acústica (SSE.4.2) destinada a emitir un pulso audible simulando cada latido detectado en la señal ECG y ademas funcionar como alarma técnica en el caso de no detectar pulsaciones. El sistema ademas incorpora un subsistema de señalización visual (SSE.4.1) que se activa en el caso de que se detecta una cantidad de pulsaciones por minuto mayor o menor a valores umbrales establecidos previamente en el sistema microcontrolador.
-		
-	\begin{figure}[htbp]
+	Posteriormente, la señal procesada es remitida al subsistema de comunicación de datos (SSE.2.3) para ser enviada a una computadora, donde puede ser observada en tiempo real. El sistema incorpora un subsistema de señalización acústica (SSE.4.2) destinada a emitir un pulso audible simulando cada latido detectado en la señal ECG y además funcionar como alarma técnica en el caso de no detectar pulsaciones. El sistema además incorpora un subsistema de señalización visual (SSE.4.1) que se activa en el caso de que se detecta una cantidad de pulsaciones por minuto mayor o menor a valores umbrales establecidos previamente en el sistema microcontrolador.
+	
+	\begin{figure}[H]
 		\centering
 		\includegraphics[width=1\textwidth]{img/Diagrama-de-bloques.pdf}
 		\caption{Diagrama de bloques del sistema}
 		\label{fig:diagrama-de-bloques}
 	\end{figure}
 	
-	%\section{Descripción del Sistema Electrónico Programable}
+	\newpage
+	
+	\section{Sistema Electrónico Programable}
+	
+	El Sistema Electrónico Programable (SEP) adquiere la señal de ECG mediante un cable paciente de tres canales. La señal ingresa a una etapa de acondicionamiento donde un amplificador de instrumentación con alto rechazo al modo común (CMRR) se encarga de la preamplificación. Para mitigar el ruido, se implementa un circuito de Realimentación de Pierna Derecha (RLD), el cual inyecta al paciente la señal de modo común invertida. La cadena analógica finaliza con un filtro pasa-bajos Sallen-Key de segundo orden, un lazo de corrección de offset (DC Loop) y un Amplificador de Ganancia Variable (VGA), entregando una señal acondicionada para su digitalización. 
+	
+	La señal acondicionada es digitalizada por el conversor analógico-digital (ADC) del microcontrolador LPC1769. A nivel de firmware, se aplica un filtro digital IIR para suprimir la interferencia de red de 50 Hz. Posteriormente, la resolución de la señal se reduce de 12 a 8 bits para optimizar su transmisión hacia una computadora, donde una interfaz desarrollada en Python (QtDesigner) permite la visualización gráfica en tiempo real.
+	
+	El sistema estima la frecuencia cardíaca (bpm) detectando los R-peaks mediante comparación por umbral. Originalmente, se contempló el uso de un buzzer para la indicación sonora del latido, pero, durante las pruebas, se observó que su activación introducía ruido severo en la señal de ECG, probablemente debido a un acople de impedancias en la masa. En consecuencia, se reemplazó la alerta sonora por una visual, utilizando el parpadeo del LED verde de la placa en sincronía con el latido.
+	
+	\section{Marco teórico}
+	El electrocardiógrafo (ECG) es un instrumento médico fundamental para registrar y mostrar de forma gráfica la actividad eléctrica del corazón. Su uso resulta indispensable tanto para el diagnóstico como para el seguimiento de diversas patologías cardiovasculares. En términos básicos, el electrocardiógrafo emplea electrodos colocados sobre la superficie del cuerpo para captar la actividad eléctrica generada por el corazón y propagada por la piel a través de campos eléctricos.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/ecg.jpg}
+		\caption{Estudio completo de ECG de 12 derivaciones}
+		\label{fig:ecg-12-derivaciones}
+	\end{figure}
+	
+	La dinámica del ciclo cardíaco comienza en el nodo sinusal y se propaga a través de aurículas y ventrículos a través del nodo sinoauricular, queda plasmada en el trazado del electrocardiograma. En estudio de ECG completo comprende 12 derivaciones, las cuales permiten estudiar la actividad eléctrica desde diferentes ángulos del corazón. El presente trabajo utiliza la derivación II, comprendida entre RA y LA siendo esta la mas representativa de la actividad eléctrica del corazón, así como la que mayor amplitud en la morfología de la onda presenta.
+	La ubicación de los electrodos proviene del estudio del triángulo de Einthoven. Este se basa en principios fisiológicos de la propagación del impulso eléctrico cardíaco. Los electrodos se colocan en brazo derecho, brazo izquierdo y pierna izquierda porque estas regiones permiten captar la actividad eléctrica global del corazón desde tres direcciones distintas, aprovechando la conducción del cuerpo como un volumen conductor. El impulso eléctrico se origina en el nodo sinusal y genera un vector de despolarización que se dirige preferentemente desde la base hacia el vértice del corazón, es decir, de derecha a izquierda y de arriba hacia abajo. Las posiciones de los electrodos en las extremidades permiten encontrar componentes de ese vector en el plano frontal, ofreciendo una visión integral de su dirección y magnitud. De esta manera, Einthoven pudo modelar la actividad eléctrica cardíaca como si se proyectara sobre un triángulo equilátero, base fundamental para las derivaciones bipolares del ECG.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.5\textwidth]{img/einthoven.png}
+		\caption{Triangulo de Einthoven}
+		\label{fig:triangulo-de-eithoven}
+	\end{figure}
+	
+	Las derivaciones de las extremidades, también llamadas derivaciones del plano frontal, registran la actividad eléctrica mediante electrodos ubicados en los miembros; incluyen derivaciones bipolares como I, II y III, que miden la diferencia de potencial entre dos puntos, y derivaciones unipolares aumentadas como aVR, aVL y aVF, que toman un punto de referencia común para explorar la actividad eléctrica. Por otro lado, las derivaciones precordiales o torácicas, identificadas como V1 a V6, se colocan en posiciones específicas del tórax y permiten observar el corazón en el plano horizontal, evaluando principalmente la actividad de los ventrículos. De esta manera, cada derivación ofrece una perspectiva única de la conducta eléctrica cardíaca y, al integrarlas en conjunto, se obtiene una visión completa y tridimensional de la función cardíaca.
+	
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{0.4\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/precordiales.jpg}
+			\caption{Derivaciones precordiales}
+			\label{fig:precordiales}
+		\end{subfigure}
+		\hfill
+		\begin{subfigure}[t]{0.5\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/3_leads.png}
+			\caption{Derivaciones de extremidades}
+			\label{fig:extremidades}
+		\end{subfigure}
+		\caption{Derivaciones del ECG}
+		\label{fig:derivaciones}
+	\end{figure}
 	
 	
 	
-	%\section{Desarrollo del hardware}
 	
-	%\subsection{Circuito del Subsistema electrónico programable microcontrolador}
+	Como se mencionó, el presente trabajo explora la implementación de un estudio de ECG de la derivación II, aunque dependiendo la colocación de los electrodos podría funcionar para cualquiera de las bipolares.
 	
-	%\subsection{Circuito del Subsistema electrónico de señalización óptico y acústico}
+	\subsection{Desarrollo del SSE de Adquisición y Acondicionamiento de la señal}
+	El subsistema de Adquisición y acondicionamiento de la señal consiste en tres etapas fundamentales. Primero la etapa de adquisición de la señal, en donde la señal es transmitida desde la piel hasta el circuito, luego la etapa de acondicionamiento, en donde la señal es amplificada, filtrada y preparada para el conversor AD, y por último la etapa de realimentación por pierna derecha, fundamental para poder tener una calidad de señal aceptable.
 	
-	%\subsection{Circuito del Subsistema electrónico de visualización de datos}
+	\subsubsection{Circuito del Subsistema Electrónico de Adquisición}
+	Para adquirir la señal desde la piel, se utilizan electrodos de Plata/Cloruro de Plata (Ag/AgCl). Son transductores no polarizables que convierten la corriente iónica del cuerpo en corriente electrónica. Se utilizan en el registro de ECG debido a su potencial de media celda estable y baja impedancia, lo que minimiza drásticamente los artefactos por movimiento y permite el paso fiel de las bajas frecuencias (ondas P y T) sin distorsionar la señal.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/electrodos.png}
+		\caption{Electrodos Plata/Cloruro de Plata}
+		\label{fig:electrodo-Ag-AgCl}
+	\end{figure}
 	
-	%\subsection{Circuito del Subsistema electrónico de entrada de datos}
+	Se utilizan cables pacientes apantallados (coaxiales) para preservar la integridad de la señal. El mallado metálico que recubre el conductor central actúa como una Jaula de Faraday, bloqueando las interferencias electromagnéticas externas (EMI), especialmente el ruido de 50 Hz de la red eléctrica, y evitando el acople capacitivo entre el ambiente y la línea de señal.
 	
-	%\subsection{Circuito del Subsistema electrónico de adquisición de señales}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/cable_paciente.jpg}
+		\caption{Cable paciente}
+		\label{fig:cable-paciente}
+	\end{figure}
 	
-	%\subsection{Circuito del Subsistema electrónico de comunicación de datos}
+	\subsubsection{Circuito del Subsistema Electrónico de Acondicionamiento}
+	
+	\paragraph{Preamplificación}
+	Una vez adquirida la señal, se la somete a una etapa de reacondicionamiento, en la cual ingresa al amplificador de instrumentación INA114, cuyas principales características son:
+	\begin{itemize}
+		\item CMRR de aproximadamente $115\,\text{dB}$ en el rango de frecuencias de trabajo.
+		\item Tensión de offset típica del orden de $50\,\text{uV}$.
+		\item Ganancia ajustable entre $G = 1$ y $G = 10{,}000$ mediante la resistencia $R_G$.
+	\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/ina114.png}
+		\caption{Amplificador de instrumentación INA114.}
+		\label{fig:ina114-bloques}
+	\end{figure}
+	
+	En nuestro diseño, el INA114 se configuró con una ganancia de:
+	\[
+	G = 1 + \frac{50\,\text{k}\Omega}{2\,\text{k}\Omega} \approx 26
+	\]
+	Es fundamental que las resistencias que fijan la ganancia en el INA114 estén lo más apareadas posible, con un nivel de coincidencia idealmente superior a 1:1000. Esto se debe a que utilizaremos el punto medio de estas resistencias para obtener la señal de ruido CM, utilizada luego para el circuito RLD.
+	
+	En la implementación práctica, se utilizaron resistores de precisión del $1\%$, que fueron previamente medidos para verificar su correspondencia.
+	
+	La señal de ECG presenta una amplitud típica del orden de $2\,\text{mV}$, por lo que, aun luego de esta primera etapa de amplificación, la señal alcanza solamente unos $52\,\text{mV}$ en la salida del INA114. En consecuencia, es necesario incorporar una etapa de amplificación adicional posterior al acondicionamiento inicial para aprovechar mejor el rango dinámico de las etapas siguientes.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.5\textwidth]{img/ina_circuit.png}
+		\caption{Configuración del INA114 con resistencia de ganancia $R_G = 2\,\text{k}\Omega$.}
+		\label{fig:ina114-circuito}
+	\end{figure}
+	
+	
+	Para alimentar el amplificador INA114 fue necesario disponer de una fuente de alimentación simétrica. Con este fin, se implementó un sistema de regulación utilizando un regulador de tensión \textbf{LM7809}, alimentado por tres baterías Li-Ion conectadas en serie, de $3.7\,\text{V}$ cada una, obteniendo un total de $11.1\,\text{V}$. 
+	
+	El regulador entrega $9\,\text{V}$ a su salida, y mediante un divisor resistivo se genera un punto medio que, al ser desacoplado correctamente, se toma como \textbf{referencia (GND)} para todo el circuito, tal como se muestra en la Figura~\ref{fig:psu_circuitt}. De esta manera se obtiene una alimentación simétrica de \textbf{$+4.5\,\text{V}$ y $-4.5\,\text{V}$} respecto de dicha referencia, permitiendo el correcto funcionamiento del INA114.
+	
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/psu_circuit.png}
+		\caption{Unidad de alimentacón del circuito}
+		\label{fig:psu_circuitt}
+	\end{figure}
+	
+	\paragraph{Filtro LP Sallen-Key}
+	Dado que el rango de frecuencias útil de la señal de ECG se encuentra aproximadamente entre 0.5 Hz y 150 Hz, es necesario aplicar filtrado para eliminar componentes en frecuencia superiores a dicho rango, ya que podrían generar distorsiones y producir aliasing durante la digitalización.
+	Según las recomendaciones de la Asociación Americana del Corazón (AHA), se debe emplear un filtro pasa altos de primer orden en 0.5 Hz y un filtro pasa bajos de segundo orden en 150 Hz.
+	
+	Con el objetivo de mejorar la calidad de la señal, aun a costa de sacrificar parte de su contenido, en este diseño se decidió implementar un filtro pasabajos Sallen-Key de segundo orden, con una frecuencia de corte de aproximadamente 108 Hz, lo cual permite atenuar eficazmente el contenido de alta frecuencia conservando la información más relevante del ECG.
+	La función de transferencia del circuito es:
+	\begin{equation}
+		H(s) = \frac{1}{s^2 + \frac{1}{R_1 C_2}s + \frac{1}{R_1 R_2 C_1 C_2}}
+		= \frac{\omega_n^2}{s^2 + 2 \zeta \omega_n s + \omega_n^2}
+		\label{eq:transferencia}
+	\end{equation}
+	Despejando la frecuencia de corte:
+	\[
+	f_c = \frac{1}{2\pi \sqrt{R_1 R_2 C_1 C_2}}
+	\]
+	
+	Elegimos los siguientes valores:
+	\begin{itemize}
+		\item $R_1 = 1470\,\Omega$
+		\item $R_2 = 1470\,\Omega$
+		\item $C_1 = 1\,\mu F$
+		\item $C_2 = 1\,\mu F$
+	\end{itemize}
+	
+	\[
+	f_c = \frac{1}{2\pi \sqrt{1470\,\Omega \cdot 1470\,\Omega \cdot 1\,\mu F \cdot 1\,\mu F}} \approx 108\,Hz
+	\]
+	
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{0.7\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/sallen_key_board.png}
+			\caption{Hardware del Sallen-Key}
+			\label{fig:precordiales}
+		\end{subfigure}
+		\begin{subfigure}[t]{0.5\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/sallen_key_circuit.png}
+			\caption{Esquemático del Sallen-Key}
+			\label{fig:extremidades}
+		\end{subfigure}
+		\caption{Implementación del Sallen-Key}
+		\label{fig:derivaciones}
+	\end{figure}
+	
+	\paragraph{DC Loop}
+	
+	Es habitual que la señal presente un offset variable debido a diferencias de potencial entre los electrodos, impedancia de la piel y ruido de baja frecuencia. Este desplazamiento de continua puede saturar las etapas analógicas posteriores o reducir el rango dinámico útil del conversor A/D. Para corregirlo, se incorpora un circuito cuya topología se denomina DC Loop, el cual captura el nivel medio de la señal y generar una realimentación en continua que lo elimina, y lo reemplaza con el offset deseado.
+	
+	La realimentación se implementa mediante un filtro pasa alto que extrae el componente continuo de la señal de salida y lo realimenta a la entrada inversora del amplificador. Además, por la entrada no inversora se introduce el valor de offset deseado, utilizando un divisor resistivo para lograr 200mV, valor óptimo para no saturar la entrada del ADC.
+	
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{0.8\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/dcloop_board.png}
+			\caption{Hardware de DC Loop}
+			\label{fig:hw-dc-loop}
+		\end{subfigure}
+		\begin{subfigure}[t]{0.45\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/dcloop_circuit.png}
+			\caption{Esquemático de DC Loop}
+			\label{fig:extremidades}
+		\end{subfigure}
+		\caption{Implementacion del DC Loop}
+		\label{fig:derivaciones}
+	\end{figure}
+	
+	\paragraph{VGA}
+	Para adaptar la amplitud de la señal de ECG al rango de entrada del conversor A/D (0 a 3.3 V), se incorporó un \textit{Variable Gain Amplifier} (VGA), encargado de ajustar la ganancia antes de la etapa de digitalización. Como se observa en la Figura~\ref{fig:vga_circuit}, el VGA se implementó mediante un amplificador operacional en configuración no inversora, utilizando un potenciómetro multivuelta en la rama de realimentación para regular la ganancia de forma fina. 
+	
+	La ganancia del circuito puede variarse aproximadamente entre:
+	\[
+	G_{\text{máx}} = 1 + \frac{100\,\text{k}\Omega}{1\,\text{k}\Omega} \approx 101
+	\quad\text{y}\quad
+	G_{\text{mín}} = 1 + \frac{100\,\text{k}\Omega}{11\,\text{k}\Omega} \approx 10.1
+	\]
+	La amplificación total estimada del sistema se ubica en el intervalo:
+	\[
+	260 \;\le\; A_{\text{total}} \;\le\; 2600
+	\]
+	
+	
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{0.8\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/vga_board.png}
+			\caption{Hardware del VGA}
+			\label{fig:vga_board}
+		\end{subfigure}
+		\begin{subfigure}[t]{0.45\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/vga_circuit.png}
+			\caption{Esquemático del VGA}
+			\label{fig:vga_circuit}
+		\end{subfigure}
+		\caption{Implementación del VGA}
+		\label{fig:vga}
+	\end{figure}
+	
+	Además, como se observa en la Figura~\ref{fig:schottky}, se implementó un circuito de protección de entrada del conversor A/D, el cual limitará los valores de voltaje en el rango útil de trabajo del micro menos la caída de tensión en el Schottky (aproximadamente 0.1V).
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.5\textwidth]{img/schottky.png}
+		\caption{Protección del conversor A/D}
+		\label{fig:schottky}
+	\end{figure}
+	
+	
+	\subsubsection{Circuito del Subsistema Electrónico de Right Leg Drive}
+	El circuito de pierna derecha es el encargado de estabilizar el acople electromagnetico del entorno con la piel del paciente. Esto lo hace al amplificar e invertir la señal de ruido modo comun e inyectarla por la pierna derecha. Esta señal CM la obtenemos al tomar el punto medio de la resistencia de ganancia $R_G$ del INA114, como podemos ver segun la hoja de datos:
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/ina114_schematics.png}
+		\caption{Configuración del INA114 con resistencia de ganancia $R_G = 2\,\text{k}\Omega$.}
+		\label{fig:ina114-circuito}
+	\end{figure}
+	
+	La hoja de datos también nos proporciona un circuito básico para implementar el RLD, el cual utiliza solo dos OPAMP.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/ina114_rld.png}
+		\caption{Configuración del INA114 con resistencia de ganancia $R_G = 2\,\text{k}\Omega$.}
+		\label{fig:ina114_rld}
+	\end{figure}
+	
+	Como se observa en la Figura~\ref{fig:ina114_rld}, este circuito aísla las etapas mediante un buffer y luego implementa una configuración inversora que introduce una ganancia de:
+	\[
+	G = -39
+	\]
+	Este será la topología que implementaremos en el trabajo.
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{0.8\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/rld_board.png}
+			\caption{Hardware de RLD}
+			\label{fig:rld_board}
+		\end{subfigure}
+		\begin{subfigure}[t]{0.6\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/rld_circuit.png}
+			\caption{Esquemático de RLD}
+			\label{fig:rld_circuit}
+		\end{subfigure}
+		\caption{Implementación de RLD}
+		\label{fig:rld}
+	\end{figure}
+	
+	
+	\subsection{Circuito del Subsistema electrónico de comunicación de datos}
+	La transmisión de datos se realiza mediante comunicación \textit{UART} desde la LPC1769 hacia un conversor USB--UART \textbf{CP2102}, encargado de transformar el formato UART a un protocolo USB compatible con la PC, donde se ejecuta el software de visualización. 
+	
+	Para establecer la comunicación, se soldaron las líneas \texttt{TX} y \texttt{RX} de la LPC1769 a las entradas \texttt{RX} y \texttt{TX}.
+	
+	La implementación física puede observarse en la Figura~\ref{fig:usbttl}.
+	
+	
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{0.8\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/usbttl_board.png}
+			\caption{Hardware de CP2102}
+			\label{fig:usbttl_board}
+		\end{subfigure}
+		\begin{subfigure}[t]{0.6\textwidth}
+			\centering
+			\includegraphics[width=\textwidth]{img/usbttl_circuit.png}
+			\caption{Esquemático de CP2102}
+			\label{fig:usbttl_circuit}
+		\end{subfigure}
+		\caption{Implementación de CP2102}
+		\label{fig:usbttl}
+	\end{figure}
+	
+	%---------------------------------------------------------------------
+	%Desarrollo del firmware
+	%---------------------------------------------------------------------
+	
+	\section{Desarrollo del firmware}
+	
+	\subsection{Firmware del Subsistema de adquisición de señales}
+	
+	El conversor A/D es un periférico incluido en el SSEP2.2 LPC1769, el mismo está configurado para muestrear con una frecuencia de 1 kHz mediante solicitud del Timer 0, Match channel 1. Cuando el periférico termina, la conversión realiza una interrupción.
+	
+	Dentro de la interrupción se realiza la etapa de filtrado digital de la muestra obtenida mediante un filtro IIR, y se escala para guardar los 8 bits más significativos, luego es almacenado en un doble buffer ping-pong (i. e. mientras que un buffer se llena con muestras, el otro es vaciado).
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/DdB_ISR_ADC.pdf}
+		\caption{Diagrama de bloques de ISR del conversor A/D}
+		\label{fig:isr-adc}
+	\end{figure}
+	
+	\begin{minted}[tabsize=2]{c}
+		void ADC_IRQHandler(void) {
+			
+			if (ADC_ChannelGetStatus(ADC_CHANNEL_0, ADC_DATA_DONE)) {
+				
+				uint16_t adcRawData = ADC_ChannelGetData(ADC_CHANNEL_0);
+				
+				// Procesamiento de la señal mediante filtro IIR
+				fifoInputIIR[adcIndex] = (float32_t)adcRawData;
+				
+				arm_biquad_cascade_df1_f32(&iir_instance, &fifoInputIIR[0] + adcIndex,
+				&fifoOutputIIR[0] + adcIndex, 1);
+				
+				// Escalado a 0–255
+				float32_t scaled = fifoOutputIIR[adcIndex] * 255.0f / 4095.0f;
+				if (scaled < 0.0f)
+				scaled = 0.0f;
+				else if (scaled > 255.0f)
+				scaled = 255.0f;
+				
+				// Redondeo
+				uint8_t data_u8 = (uint8_t)(scaled + 0.5f);
+				
+				// --- Conteo de pulsos en tiempo real ---
+				// Detectar flanco de subida
+				if (data_u8 >= VAL_UMBRAL && !r_flag) {
+					GPIO_ClearPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
+					pulsos_acumulados++;
+					r_flag = 1;
+				}
+				
+				// Detectar flanco de bajada para resetear detección
+				if (data_u8 < VAL_UMBRAL && r_flag) {
+					GPIO_SetPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
+					r_flag = 0;
+				}
+				
+				adcIndex++;
+				if (adcIndex >= TX_BUFFER_SIZE) {
+					adcIndex = 0;
+				}
+				
+				// --- Ping Pong UART ---
+				if (fillIndex < TX_BUFFER_SIZE) {
+					txFillBuffer[fillIndex] = data_u8;
+					fillIndex++;
+				} else {
+					if (!dmaUartBusy) {
+						// Buffer lleno y DMA libre
+						uint8_t *txDMABuffer = (uint8_t *)txFillBuffer;
+						startUART_DMA(txDMABuffer, &dmaUartBusy);
+						
+						// Cambiar buffer de llenado
+						txFillBuffer = (txFillBuffer == txBufferA) ? txBufferB : txBufferA;
+						fillIndex = 0;
+					} else {
+						// Buffer lleno y DMA ocupada
+						fillIndex = TX_BUFFER_SIZE;
+					}
+				}
+			}
+		}
+		
+	\end{minted}
+	
+	\subsection{Firmware del subsistema de filtrado IIR}
+	Para mitigar el ruido de red de $50\,\text{Hz}$ presente en la señal de ECG, se implementó un filtro \textbf{IIR (Infinite Impulse Response) Notch} utilizando las librerías \textbf{CMSIS-DSP} provistas por ARM. Estas librerías incluyen implementaciones optimizadas de filtros IIR, FIR y LMS, además de diversas funciones matemáticas para procesamiento digital de señales.
+	
+	Si bien únicamente los microcontroladores \textbf{Cortex-M4} y superiores cuentan con unidad de punto flotante por hardware (FPU), la librería CMSIS-DSP está diseñada para funcionar también en arquitecturas sin FPU, como el \textbf{Cortex-M3} de la LPC1769 utilizada en este proyecto. En este caso, todas las operaciones en punto flotante se ejecutan mediante la ALU del core, lo que implica un mayor costo computacional en comparación con una implementación con FPU.
+	
+	No obstante, el sistema se ejecuta con un \textbf{clock de 100 MHz} y una \textbf{frecuencia de muestreo de 1 kHz}, lo que asegura un margen temporal suficiente para ejecutar las operaciones del filtro IIR sin comprometer el rendimiento. De este modo, es posible implementar procesamiento en punto flotante en tiempo real incluso sobre una arquitectura sin FPU. Además, computacionalmente el filtro IIR es mas barato de implementar que otras estructuras como el FIR, en donde para obtener la misma respuesta en frecuencia del filtro se necesitarían muchos más coeficientes que su contraparte IIR, derivando en un mayor consumo computacional y posibilidad de problemas de timing. La desventaja de los filtros IIR es que introducen distorsión de fase, pero para aplicaciones biomédicas como la desarrollada en el presente trabajo esto no es un problema a considerar.
+	
+	Un filtro \textbf{IIR} es un sistema lineal e invariante en el tiempo cuya respuesta al impulso posee una duración potencialmente infinita, debido a la presencia de realimentación. A diferencia de los filtros FIR, los IIR reutilizan salidas previas para generar nuevas muestras, lo que permite alcanzar respuestas frecuenciales más pronunciadas con un orden menor como se mencionó anteriormente.
+	
+	La ecuación en diferencias que describe a un filtro IIR en el dominio discreto es:
+	
+	\[
+	y[n] = -\sum_{k=1}^{N} a_k\,y[n-k] + \sum_{k=0}^{M} b_k\,x[n-k],
+	\]
+	
+	donde \(x[n]\) es la señal de entrada, \(y[n]\) la señal filtrada, y los coeficientes \(a_k\) y \(b_k\) definen los polos y ceros del sistema. La presencia de términos dependientes de \(y[n-k]\) evidencia la realimentación y explica la duración infinita de la respuesta al impulso. 
+	
+	
+	A la hora de diseñar el filtro, se utilizó el software MATLAB con el toolkit filterDesigner. Aquí se introdujeron los parámetros deseados del filtro como se observa en al Figura~\ref{fig:filt_config}.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/filt_config.png}
+		\caption{Creación del filtro IIR.}
+		\label{fig:filt_config}
+	\end{figure}
+	
+	Luego se seleccionó la estructura deseada del filtro. La librería CMSIS-DSP nos proporciona funciones de filtrado optimizadas para las siguientes estructuras:
+	\begin{itemize}
+		\item Filtro Bicascada en Forma Directa I.
+		\item Filtro Bicascada en Forma Directa II Transpuesta.
+		\item Filtro en Celosía.
+	\end{itemize}
+	Se decidió utilizar la estructura Bicascada en Forma Directa I. La arquitectura del filtro, esquematizada en la Figura~\ref{fig:biquad_1_stage} utiliza 3 coeficientes en el numerador y 2 en el denominador, y un total de 4 retardos para implementar el algoritmo descrito. Si bien las otras arquitecturas utilizan menos recursos para lograr la misma función de transferencia, es un poco mas complejo el diseño de sus coeficientes en lo que respecta a la estabilidad del filtro, por lo que decidimos utilizar la forma más básica.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/biquad_1_stage.png}
+		\caption{Arquitectura del filtro elegida.}
+		\label{fig:biquad_1_stage}
+	\end{figure}
+	
+	Cuya implementación es:
+	\[ y[n] = b_{0}x[n] + b_{1}x[n-1] + b_{2}x[n-2] - a_{1}y[n-1] - a_{2}y[n-2] \]
+	
+	
+	Si se deseara lograr filtros mas agresivos, se pueden concectar en cascada varios filtros, como se indica en la Figura~\ref{fig:biquad_n_stages}, pero para la presente aplicación con una etapa fue suficiente para obtener buenos resultados.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/biquad_n_stages.png}
+		\caption{Filtros en cascada}
+		\label{fig:biquad_n_stages}
+	\end{figure}
+	Una vez diseñado el filtro, se lo cuantizó desde \texttt{float64} (formato por defecto de MATLAB) a \texttt{float32} para poder implementarlo en la LPC1769. Verificamos que la respuesta en frecuencia cumple con las necesidades planteadas en la Figura~\ref{fig:bode} 
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/bode.png}
+		\caption{Diagrama de bode del filtro}
+		\label{fig:bode}
+	\end{figure}
+	
+	Una vez cuantizado, se verificó la convergencia del mismo mediante el análisis de polos y ceros y en el circulo unitario. Para garantizar la convergencia, los polos de la función deberán quedar dentro del circulo. La Figura~\ref{fig:pole_zero_diagram} muestra la verificación realizada.
+	
+	\begin{figure}[H]
+		\centering
+		\begin{subfigure}[t]{1\textwidth}
+			\centering
+			\includegraphics[width=0.8\textwidth]{img/pole_zero.png}
+			\label{fig:pole_zero}
+		\end{subfigure}
+		\begin{subfigure}[t]{1\textwidth}
+			\centering
+			\includegraphics[width=0.8\textwidth]{img/pole_zero_zoom.png}
+			\label{fig:pole_zero_zoom}
+		\end{subfigure}
+		\caption{Verificación de estabilidad del filtro}
+		\label{fig:pole_zero_diagram}
+	\end{figure}
+	Una vez verificada la convergencia del filtro y validado su comportamiento en simulación, se exportaron los coeficientes en formato \texttt{float32}, junto con la ganancia total \(G\) del sistema. 
+	
+	Para su implementación en la \texttt{LPC1769} se utilizó la función de la librería \textbf{CMSIS-DSP} \texttt{arm\_biquad\_cascade\_df1\_f32()}, que implementa un banco de biquads en forma directa I:
+	
+	\begin{minted}{c}
+		void arm_biquad_cascade_df1_f32(const arm_biquad_casd_df1_inst_f32 *S,
+		const float32_t *pSrc,
+		float32_t *pDst,
+		uint32_t blockSize);
+	\end{minted}
+	
+	donde:
+	\begin{itemize}
+		\item \texttt{S} apunta a la estructura de instancia del filtro biquad.
+		\item \texttt{pSrc} apunta a la FIFO de datos de entrada.
+		\item \texttt{pDst} apunta a la FIFO de datos de salida filtrados.
+		\item \texttt{blockSize} indica la cantidad de muestras a procesar por llamada. Para el filtrado en tiempo real usamos un valor de 1.
+	\end{itemize}
+	
+	Previo a su uso, el filtro debe inicializarse mediante:
+	
+	\begin{minted}{c}
+		void arm_biquad_cascade_df1_init_f32(arm_biquad_casd_df1_inst_f32 *S,
+		uint8_t numStages,
+		const float32_t *pCoeffs,
+		float32_t *pState);
+	\end{minted}
+	
+	donde:
+	\begin{itemize}
+		\item \texttt{S} apunta a la estructura de instancia del filtro biquad. 
+		\item \texttt{numStages} es el número de etapas utilizadas. Como se mencionó, se utiliza 1 etapa.
+		\item \texttt{pCoeffs} apunta al arreglo de coeficientes del filtro, organizado en bloques de cinco valores por etapa biquad, en el siguiente orden:
+		\[
+		\{G*b_0,\; G*b_1,\; G*b_2,\; -G*a_1,\; -G*a_2\}
+		\]
+		En coherencia con el formato de entrega de los datos de MATLAB.
+		\item \texttt{pState} apunta al \textit{buffer} de estado, que almacena las muestras internas. Este debe tener un tamaño de 4*numStages, ya que es el lugar de memoria en el que se almacenan los resultados de las convoluciones.
+	\end{itemize}
+	
+	
+	\subsection{Firmware del Subsistema electrónico de señalización óptico}
+	
+	El LED es controlado mediante un pin GPIO, se actualiza cada 60 segundos a partir del valor de ppm acumulados en esos 60 segundos, luego se verifica que este valor se encuentre dentro del intervalo formado por PPM\_UMBRAL\_MAX y PPM\_UMBRAL\_MIN si esto no se cumple se enciende el LED. Para esto se programa una interrupción cada 60 segundos mediante el Timer 2 y dentro de su ISR.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.5\textwidth]{img/DdB_ISR_Timer_2.pdf}
+		\caption{Detección del R-PEAK}
+		\label{fig:det-r-peak}
+	\end{figure}
+	
+	\begin{minted}[tabsize=2]{c}
+		void TIMER2_IRQHandler(void) {
+			
+			if (TIM_GetIntStatus(LPC_TIM2, TIM_MR0_INT)) {
+				
+				uint16_t pulsos = pulsos_acumulados;
+				pulsos_acumulados = 0;
+				
+				// Limita ppm a 255
+				ppm = (pulsos > 255) ? 255 : (uint8_t)pulsos;
+				
+				// Verifica si el PPM está fuera del rango normal
+				if (ppm > PPM_UMBRAL_MAX || ppm < PPM_UMBRAL_MIN) {
+					GPIO_ClearPins(PORT_LED_RED, BIT_VALUE(PIN_LED_RED));
+				} else {
+					GPIO_SetPins(PORT_LED_RED, BIT_VALUE(PIN_LED_RED));
+				}
+				
+				TIM_ClearIntPending(LPC_TIM2, TIM_MR0_INT);
+			}
+		}
+	\end{minted}
+	\subsection{Firmware del Subsistema electrónico de señalización acústico}
+	
+	El buzzer, al igual que el LED se controla mediante un pin GPIO, su comportamiento es modificado en el ISR del conversor A/D (ver \ref{fig:isr-adc}), de manera tal que imita el comportamiento de un R-PEAK a partir de las muestras filtradas.
+	
+	\begin{minted}[tabsize=2]{c}
+		// --- Conteo de pulsos en tiempo real ---
+		// Detectar flanco de subida
+		if (data_u8 >= VAL_UMBRAL && !r_flag) {
+			GPIO_ClearPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
+			pulsos_acumulados++;
+			r_flag = 1;
+		}
+		
+		// Detectar flanco de bajada para resetear detección
+		if (data_u8 < VAL_UMBRAL && r_flag) {
+			GPIO_SetPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
+			r_flag = 0;
+		}
+	\end{minted}
+	Viendo la figura \ref{fig:det-r-peak}, el algoritmo funciona de la siguiente forma:
+	\begin{enumerate}
+		\item Si la muestra es mayor que el valor umbral establecido, se asume que estamos en la parte de R-PEAK de la señal 
+		\item Con el fin de no seguir contabilizando sucesivas muestras como otros R-PEAK se activa una flag
+		\item Cuando una muestra es menor que el valor umbral, se desactiva la bandera, asumiendo el fin de la parte R-PEAK
+	\end{enumerate}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{img/ecg_onda.jpg}
+		\caption{Detección del R-PEAK}
+		\label{fig:det-r-peak}
+	\end{figure}
+	
+	\subsection{Firmware del Subsistema electrónico de comunicación de datos}
+	
+	El módulo UART es un periférico incluido en el SSEP2.2 LPC1769, el firmware está implementado en el ISR de conversor A/D (ver \ref{fig:isr-adc}) el mismo está configurado para enviar datos con la siguiente configuración:
+	\begin{enumerate}
+		\item PARITY = NONE
+		\item DATABITS = 8 bits
+		\item STOPBITS = 1 bits
+	\end{enumerate}
+	
+	Además funciona con el módulo GPDMA (General purpose direct memory address) también incluido en el LPC1769 evitando el uso de procesamiento para realizar cada transmisión. El envío se realiza cuando se cumplen que el UART no está siendo usado y alguno de los dos buffers está lleno.
+	
+	\begin{minted}[tabsize=2]{c}
+		// --- Ping Pong UART ---
+		if (fillIndex < TX_BUFFER_SIZE) {
+			txFillBuffer[fillIndex] = data_u8;
+			fillIndex++;
+		} else {
+			if (!dmaUartBusy) {
+				// Buffer lleno y DMA libre
+				uint8_t *txDMABuffer = (uint8_t *)txFillBuffer;
+				startUART_DMA(txDMABuffer, &dmaUartBusy);
+				
+				// Cambiar buffer de llenado
+				txFillBuffer = (txFillBuffer == txBufferA) ? txBufferB : txBufferA;
+				fillIndex = 0;
+			} else {
+				// Buffer lleno y DMA ocupada
+				fillIndex = TX_BUFFER_SIZE;
+			}
+		}
+	\end{minted}
+	
+	
+	\section{Aplicación para PC en Python}
+	
+	Se desarrolló una aplicación en Python utilizando el framework \textbf{PyQt5} para visualizar, en tiempo real, los datos recibidos desde el puerto UART. La señal se muestra mediante un osciloscopio virtual embebido en la ventana principal, utilizando una DLL externa (\texttt{Osc\_DLL64.dll}) que implementa el \textit{Serial Scope}.
+	
+	El programa se organiza en módulos separados: uno para la interfaz gráfica, otro para el manejo del puerto UART y otro dedicado a controlar el osciloscopio. La DLL se comunica mediante \texttt{ctypes}, permitiendo crear la instancia del osciloscopio, mostrarla en la interfaz y actualizarla con cada muestra recibida.
+	
+	Una vez establecida la conexión UART, el sistema recibe los datos en forma continua y los envía directamente a la DLL para su visualización. En paralelo, se calcula la frecuencia de muestreo, la escala temporal y la frecuencia dominante mediante FFT, actualizando la interfaz en tiempo real. En la Figura~\ref{fig:scope} se observa la aplicación.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\textwidth]{img/scope.png}
+		\caption{Aplicación de visualización}
+		\label{fig:scope}
+	\end{figure}
 	
 	
 	
-	%\section{Desarrollo del firmware}
+	\section{Pruebas de sistema.}
 	
-	%\subsection{Firmware del Subsistema electrónico de señalización óptico y acústico}
+	A continuación se presentan los casos de prueba realizados para validar el correcto funcionamiento del sistema completo de adquisición, procesamiento y transmisión de ECG. Cada caso incluye el objetivo, el procedimiento realizado, los parámetros evaluados y el resultado obtenido.
 	
-	%\subsection{Firmware del Subsistema electrónico de visualización de datos}
+	\begin{table}[H]
+		\centering
+		\footnotesize 
+		\renewcommand{\arraystretch}{1.4}
+		\setlength{\tabcolsep}{2pt}         
+		\begin{tabular}{|C{1.4cm}|C{2.7cm}|C{3.0cm}|C{3.0cm}|C{1.8cm}|C{2.5cm}|}
+			\hline
+			\rowcolor{blue!20}
+			\textbf{Nro. Caso de Prueba} &
+			\textbf{Descripción del Caso de Prueba} &
+			\textbf{Paso} &
+			\textbf{Resultado Esperado} &
+			\textbf{Resultado Obtenido} &
+			\textbf{Observaciones}
+			\\ \hline
+			
+			
+			1 &
+			Adquisición correcta de la señal de ECG acondicionamiento &
+			Conectar el osciloscopio a la salida del circuito de acondicionamiento con el paciente conectado &
+			Se debe ver la señal real de ECG con ruido de 50Hz. &
+			\textcolor{green!40!black}{\textbf{PASA}} &
+			Ver Figura~\ref{fig:osc_ecg}
+			\\ \hline
+			
+			2 &
+			Envío de datos mediante el circuito de comunicación de datos. &
+			Ejecutar el firmware del LPC1769 y conectar la UART2 a la PC. &
+			Los datos de la señal ECG deben enviarse de forma continua por UART2 sin pérdidas. &
+			\textcolor{green!40!black}{\textbf{PASA}} &
+			Se observa un flujo estable de datos hacia la PC sin errores aparentes.
+			\\ \hline
+			
+			3 &
+			Envío e interpretación correcta de los datos enviados en la aplicación desarrollada en la PC. &
+			Ejecutar la aplicación en Python y seleccionar el puerto serie correspondiente. &
+			La aplicación debe reconstruir y graficar la señal de ECG en tiempo real de forma coherente. &
+			\textcolor{green!40!black}{\textbf{PASA}} &
+			Ver Figura~\ref{fig:scope_running}
+			\\ \hline
+			
+			4 &
+			Activación del sistema de señalización óptica. &
+			Simular diferentes frecuencias cardíacas y observar el comportamiento del LED. &
+			El LED debe encenderse cuando la frecuencia se encuentre fuera del rango configurado y apagarse dentro del rango 'normal' &
+			\textcolor{green!40!black}{\textbf{PASA}} &
+			Comportamiento correcto para las condiciones probadas.
+			\\ \hline
+			
+			5 &
+			Activación del sistema de señalización acústica. &
+			Probar el accionamiento del buzzer a partir de la detección de latidos. &
+			El buzzer debería emitir un pulso audible por cada latido detectado. &
+			\textcolor{red}{\textbf{NO PASA}} &
+			El buzzer inyecta demasiado ruido en la señal de ECG, por lo que no se implementó en la versión final.  
+			Se comprobó que la lógica de activación funciona correctamente reemplazando el buzzer por un LED.
+			\\ \hline
+			
+		\end{tabular}
+		\caption{Casos de prueba del sistema.}
+	\end{table}
 	
-	%\subsection{Firmware del Subsistema electrónico de entrada de datos}
+	\section{Conclusiones}
 	
-	%\subsection{Firmware del Subsistema electrónico de adquisición de señales}
+	El desarrollo del sistema permitió integrar en un mismo dispositivo todas las etapas necesarias para la adquisición, digitalización, procesamiento y transmisión de una señal de ECG en tiempo real. A partir de la señal analógica debidamente acondicionada, el microcontrolador LPC1769 realizó una conversión ADC estable, temporizada mediante un evento de \emph{match} del Timer0, lo que garantizó una frecuencia de muestreo precisa y adecuada para este tipo de señales biomédicas.
 	
-	%\subsection{Firmware del Subsistema electrónico de comunicación de datos}
+	El filtrado digital implementado mediante un filtro IIR notch de segundo orden permitió atenuar de manera efectiva la interferencia de 50\,Hz acoplada, conservando la morfología del ECG y facilitando la posterior detección de complejos R. La cuantización y reescalado a 8 bits posibilitaron una transmisión eficiente sin comprometer la interpretación visual de la señal.
+	
+	La detección básica de latidos, implementada directamente en la rutina de interrupción del ADC mediante un umbral fijo, nos permitió obtener una estimación funcional de la frecuencia cardíaca. Asimismo, el uso de dos LEDs proporcionó una señalización simple pero efectiva del estado del sistema: uno para indicar la detección de pulsos en tiempo real, reemplazando al buzzer propuesto inicialmente y otro para alertar condiciones en las que la frecuencia cardíaca se encontraba fuera de los valores definidos como 'normales' o más bien sanos.
+	
+	El empleo de UART2 asistido por DMA resultó fundamental para enviar los datos a la computadora sin cargar el CPU, asegurando una transmisión continua y estable. La posterior visualización en Python confirmó que el sistema es capaz de reconstruir la señal de ECG a partir de los datos enviados por el microcontrolador.
+	
+	En conjunto, el sistema desarrollado cumple con los objetivos planteados: adquirir una señal ECG, filtrarla digitalmente, detectar pulsos cardíacos y transmitir la información de forma confiable para su visualización externa. Como líneas futuras de mejora se identifican la implementación del subsistema acústico (buzzer), la adisión de un algoritmo adicional que muestre por display la frecuencia cardíaca, el uso de técnicas más robustas de detección de picos y la incorporación de filtros digitales adicionales que permitan mejorar la relación señal-ruido en entornos clínicos reales.
+	
+	\section{Bibliografía y referencias}
+	
+	A continuación se listan libros, documentos técnicos y recursos digitales utilizados para el desarrollo del Trabajo Práctico Integrador.
+	
+	\begin{itemize}
+		\item[•] [1] NXP Semiconductors. (2016). \textit{LPC176x/5x User Manual} (UM10360).  
+		Obtenido de \url{https://pessina.mib.infn.it/CROSS/html/File_pdf/LPC1768_UM10360.pdf}
+		
+		\item[•] [2] NXP Semiconductors. \textit{LPC176x/5x Data Sheet}.  
+		Obtenido de \url{https://www.nxp.com/docs/en/data-sheet/LPC1769_68_67_66_65_64_63.pdf}
+		
+		\item[•] [3] Embedded Artists. (2024). \textit{LPCXpresso1769 Development Board}.  
+		Obtenido de \url{https://www.embeddedartists.com/products/lpcxpresso1769/}
+		
+		\item[•] [4] \textit{CMSIS DSP Software Library}.  
+		Obtenido de \url{https://github.com/ARM-software/CMSIS-DSP}
+		
+		\item[•] [5] NXP Semiconductors. \textit{MCUXpresso IDE Documentation}.  
+		Obtenido de \url{https://www.nxp.com/design/design-center/software/development-software/mcuxpresso-software-and-tools-/mcuxpresso-integrated-development-environment-ide:MCUXpresso-IDE}
+		
+		\item[•] [6] Young, R. (2004). \textit{The Requirements Engineering Handbook}.  
+		Artech House. Documento provisto en copia digital interna.
+		
+		\item[•] [7] NASA. (2007). \textit{NASA Systems Engineering Handbook} (NASA/SP-2007-6105 Rev 1).  
+		NASA Technical Reports. Documento provisto en copia digital interna.
+		
+		\item[•] [8] Texas Instruments. (2000). \textit{INA114 Precision Instrumentation Amplifier – Data Sheet}.  
+		Obtenido de \url{https://www.ti.com/lit/ds/symlink/ina114.pdf}
+		
+		\item[•] [9] Oppenheim, A. V., \& Schafer, R. W. (2010). \textit{Discrete-Time Signal Processing} (3rd Edition).  
+		Pearson. Documento provisto en copia digital interna.
+		
+		\item[•] [10] Smith, S. W. (1997). \textit{The Scientist and Engineer's Guide to Digital Signal Processing}.  
+		Obtenido de \url{https://www.dspguide.com/}
+		
+		
+		
+		
+	\end{itemize}
+	
+	
+	\appendix
+	\newgeometry{left=15mm,right=10mm,top=10mm,bottom=10mm}
+	
+	\begin{landscape}
+		\section{Hardware}
+		\thispagestyle{empty}
+		
+		\begin{center}
+			\begin{minipage}[c][0.92\textheight][c]{\linewidth}
+				\centering
+				\includegraphics[width=0.6\linewidth, angle=90, keepaspectratio]{img/sistema_electronico.jpg}
+				\vspace{4mm}
+				\label{fig:sistema_electronico}
+			\end{minipage}
+		\end{center}
+		
+		
+		\begin{tikzpicture}[remember picture, overlay]
+			\node[font=\large] at ($(current page.south east) + (13cm,1.3cm)$) {\rotatebox{0}{\thepage}};
+		\end{tikzpicture}
+		
+	\end{landscape}
+	
+	\restoregeometry
 	
 	
 	
-	%\section{Pruebas del sistema}
+	\newgeometry{left=15mm,right=10mm,top=10mm,bottom=10mm}
+	
+	\begin{landscape}
+		\section{Esquemático completo}
+		\thispagestyle{empty}
+		
+		\begin{center}
+			\begin{minipage}[c][0.92\textheight][c]{\linewidth}
+				\centering
+				\includegraphics[width=0.8\linewidth, angle=0, keepaspectratio]{img/ECGAquisitionBoard.pdf}
+				\vspace{4mm}
+				\label{fig:ECGAquisitionBoard}
+			\end{minipage}
+		\end{center}
+		
+		
+		\begin{tikzpicture}[remember picture, overlay]
+			\node[font=\large] at ($(current page.south east) + (13cm,1.3cm)$) {\rotatebox{0}{\thepage}};
+		\end{tikzpicture}
+		
+	\end{landscape}
+	
+	
+	\restoregeometry
+	
+	\newgeometry{left=15mm,right=10mm,top=10mm,bottom=10mm}
+	
+	\begin{landscape}
+		\section{Señal acondicionada}
+		\thispagestyle{empty}
+		
+		\begin{center}
+			\begin{minipage}[c][0.92\textheight][c]{\linewidth}
+				\centering
+				\includegraphics[width=0.8\linewidth, angle=0, keepaspectratio]{img/osc_ecg.jpg}
+				\vspace{4mm}
+				\label{fig:osc_ecg}
+			\end{minipage}
+		\end{center}
+		
+		
+		\begin{tikzpicture}[remember picture, overlay]
+			\node[font=\large] at ($(current page.south east) + (13cm,1.3cm)$) {\rotatebox{0}{\thepage}};
+		\end{tikzpicture}
+		
+	\end{landscape}
+	
+	\restoregeometry
+	
+	\newgeometry{left=15mm,right=10mm,top=10mm,bottom=10mm}
+	\begin{landscape}
+		\section{ECG en GUI de Python}
+		\label{Cuantizaciones}
+		\thispagestyle{empty}
+		
+		\begin{center}
+			\begin{minipage}[c][0.92\textheight][c]{\linewidth}
+				\centering
+				\includegraphics[width=0.8\linewidth, angle=0, keepaspectratio]{img/scope_running.png}
+				\vspace{4mm}
+				\label{fig:scope_running}
+			\end{minipage}
+		\end{center}
+		
+		
+		\begin{tikzpicture}[remember picture, overlay]
+			\node[font=\large] at ($(current page.south east) + (13cm,1.3cm)$) {\rotatebox{0}{\thepage}};
+		\end{tikzpicture}
+		
+	\end{landscape}
+	
+	\restoregeometry
 	
 	
 	
-	%\section{Conclusiones}
 	
 	
-	
-	%\section{Bibliografía y referencias}
-	
-	
-
 \end{document}

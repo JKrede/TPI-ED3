@@ -1,0 +1,78 @@
+#include "LPC17xx.h"
+#include "lpc17xx_adc.h"
+#include "lpc17xx_gpio.h"
+#include "config.h"
+#include <stdint.h>
+
+/*
+   Test ADC: llenar buffer en BANK0_START y toggle de LED al completarlo
+ */
+
+#define ADC_BUFFER   ((volatile uint32_t *)BANK0_START)
+uint8_t led_off = 1U;
+
+/* delay por software */
+static void delay_ms(uint32_t ms) {
+    for (uint32_t i = 0; i < ms * 20000; i++) {
+        __NOP();
+    }
+}
+
+/* Toggle del LED definido en config.h */
+static void led_toggle(void) {
+    
+    if (led_off) {
+        GPIO_ClearPins(PORT_LED, BIT_VALUE(PIN_LED));
+        led_off = 0;
+    } else {
+        GPIO_SetPins(PORT_LED, BIT_VALUE(PIN_LED));
+        led_off = 1;
+    }
+}
+
+/* Obtener una muestra del ADC.
+ * ADGDR:
+ *  - bit 31: DONE
+ *  - bits 15:4: resultado de 12 bits
+ * Guardamos el valor de 32 bits (como haría el DMA).
+ */
+static uint32_t adc_read_ADGDR(void) {
+    uint32_t ADGDR_;
+
+    /* Esperar a que DONE = 1 */
+    do {
+        ADGDR_ = LPC_ADC->ADGDR;
+    } while ((ADGDR_ & (1U << 31)) == 0);
+
+    return ADGDR_;     // Si retorno el valor pongo el void??
+}
+
+int main(void) {
+
+    configPCB();   // P0.23 como ADC, LED/Buzzer como GPIO
+    configGPIO();  // LED y Buzzer como salida y en 0
+    configADC();   // ADC en burst continuo sobre canal 0
+
+    /* indice para recorrer el buffer en BANK0_START */
+    uint32_t id0 = 0;
+
+    while (1) {
+
+        /* Lee registro global de datos del ADC */
+        uint32_t adgdr_sample = adc_read_raw();
+
+        /* Guarda en el buffer de BANK0_START */
+        ADC_BUFFER[id0] = adgdr_sample;
+        id0++;
+
+        /* Al llenarse CANT_MUESTRAS, vuelve a 0 y togglear LED */
+        if (id0 >= CANT_MUESTRAS) {
+            id0 = 0;
+            led_toggle();   // "buffer completo"
+        }
+
+        /* Delay opcional (pq no se cuanto tardaria el ciclo, para que se aprecie el toggle) */
+        delay_ms(1);
+    }
+    return 0;
+}
