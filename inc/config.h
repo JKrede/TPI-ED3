@@ -13,9 +13,9 @@
 // (255*60%)
 #define VAL_UMBRAL 153
 
-// CONFIGURACION PINES
-#define PORT_BUZZER 0
-#define PIN_BUZZER 8
+// CONFIGURACION PINES se cambia al 0 22 porque no funciono el buzzer
+#define PORT_BUZZER 3
+#define PIN_BUZZER 25
 
 #define PORT_LED 0
 #define PIN_LED 9

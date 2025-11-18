@@ -22,15 +22,15 @@ static GPDMA_Channel_CFG_Type dmaUART = {0};
  * @brief Configura pines
  */
 void configPCB(void) {
-  PINSEL_CFG_Type cfgPinBuzzer = {0};
+  PINSEL_CFG_Type cfgPinLedG = {0}; // Seria el buzzer
   PINSEL_CFG_Type cfgPinLed = {0};
   PINSEL_CFG_Type cfgADC = {0};
   PINSEL_CFG_Type cfg_TX_UART = {0};
   PINSEL_CFG_Type cfg_RX_UART = {0};
 
-  cfgPinBuzzer.portNum = PORT_BUZZER;
-  cfgPinBuzzer.pinNum = PIN_BUZZER;
-  cfgPinBuzzer.funcNum = FUNC_EXTMAT;
+  cfgPinLedG.portNum = PORT_BUZZER;
+  cfgPinLedG.pinNum = PIN_BUZZER;
+  cfgPinLedG.funcNum = FUNC_GPIO;
 
   cfgPinLed.portNum = PORT_LED;
   cfgPinLed.pinNum = PIN_LED;
@@ -50,7 +50,7 @@ void configPCB(void) {
   cfg_RX_UART.funcNum = FUNC_RX_UART2;
   cfg_RX_UART.pinMode = PINSEL_TRISTATE;
 
-  PINSEL_ConfigPin(&cfgPinBuzzer);
+  PINSEL_ConfigPin(&cfgPinLedG);
   PINSEL_ConfigPin(&cfgPinLed);
   PINSEL_ConfigPin(&cfgADC);
   PINSEL_ConfigPin(&cfg_TX_UART);
@@ -63,7 +63,10 @@ void configPCB(void) {
 void configGPIO(void) {
 
   GPIO_SetDir(PORT_LED, BIT_VALUE(PIN_LED), OUTPUT);
+  GPIO_SetDir(PORT_BUZZER, BIT_VALUE(PIN_BUZZER), OUTPUT);
+
   GPIO_ClearPins(PORT_LED, BIT_VALUE(PIN_LED));
+  GPIO_ClearPins(PORT_BUZZER, BIT_VALUE(PIN_BUZZER));
 }
 
 /**

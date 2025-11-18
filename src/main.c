@@ -61,7 +61,7 @@ int main() {
   configGPIO();
   configUART();
   configADC();
-  configTimerBuzzer(0);
+  // configTimerBuzzer(0);
   configTimerPPM();
   configTimerADC();
   configGPDMA_UART(txBufferA);
@@ -83,31 +83,31 @@ int main() {
       // Validar rango del PPM
       if (ppm_local >= PPM_UMBRAL_MIN && ppm_local <= PPM_UMBRAL_MAX) {
         // Calcular el match value basándose en el PPM actual
-        uint32_t matchValue = TOGGLE_TIME(ppm_local);
+        // uint32_t matchValue = TOGGLE_TIME(ppm_local);
 
         // Validar que matchValue no sea demasiado pequeño
-        if (matchValue >= 10) {
-          // Detener el timer antes de reconfigurar
-          TIM_Cmd(LPC_TIM1, DISABLE);
+        // if (matchValue >= 10) {
+        // Detener el timer antes de reconfigurar
+        //  TIM_Cmd(LPC_TIM1, DISABLE);
 
-          // Reconfigurar con el nuevo valor
-          configTimerBuzzer(matchValue);
+        // Reconfigurar con el nuevo valor
+        //  configTimerBuzzer(matchValue);
 
-          // Reiniciar y arrancar el timer
-          TIM_ResetCounter(LPC_TIM1);
-          TIM_Cmd(LPC_TIM1, ENABLE);
-        } else {
-          // matchValue muy pequeño, detener buzzer
-          TIM_Cmd(LPC_TIM1, DISABLE);
-        }
+        // Reiniciar y arrancar el timer
+        //  TIM_ResetCounter(LPC_TIM1);
+        //  TIM_Cmd(LPC_TIM1, ENABLE);
       } else {
-        // PPM fuera de rango, detener el buzzer
-        TIM_Cmd(LPC_TIM1, DISABLE);
+        // matchValue muy pequeño, detener buzzer
+        //  TIM_Cmd(LPC_TIM1, DISABLE);
       }
+    } else {
+      // PPM fuera de rango, detener el buzzer
+      // TIM_Cmd(LPC_TIM1, DISABLE);
     }
   }
+}
 
-  return 0;
+return 0;
 }
 
 void ADC_IRQHandler(void) {
@@ -139,12 +139,14 @@ void ADC_IRQHandler(void) {
     // --- Conteo de pulsos en tiempo real ---
     // Detectar flanco de subida
     if (data_u8 >= VAL_UMBRAL && !r_flag) {
+      GPIO_SetPins(PORT_BUZZER, BIT_VALUE(PIN_BUZZER));
       pulsos_acumulados++;
       r_flag = 1;
     }
 
     // Detectar flanco de bajada para resetear detección
     if (data_u8 < VAL_UMBRAL && r_flag) {
+      GPIO_ClearPins(PORT_BUZZER, BIT_VALUE(PIN_BUZZER));
       r_flag = 0;
     }
 
