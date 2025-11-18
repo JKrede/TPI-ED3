@@ -23,7 +23,6 @@ float32_t iir_coeffs[5] = {b0, b1, b2, -a1, -a2};
 volatile float32_t fifoInputIIR[TX_BUFFER_SIZE];
 volatile float32_t fifoOutputIIR[TX_BUFFER_SIZE];
 
-
 // Buffer para DMA UART
 volatile uint8_t txBufferA[TX_BUFFER_SIZE];
 volatile uint8_t txBufferB[TX_BUFFER_SIZE];
@@ -34,13 +33,8 @@ volatile uint16_t fillIndex = 0;
 // flag: DMA ocupada transmitiendo algún buffer
 volatile uint8_t dmaUartBusy = 0;
 
-
 // ADC
 volatile uint16_t adcIndex = 0;
-
-// Buffer para valores de ppm
-volatile uint8_t ppmBuffer[TX_BUFFER_SIZE];
-volatile uint16_t ppmBufferIndex = 0;
 
 // Variables para conteo de pulsos acumulativo
 volatile uint16_t pulsos_acumulados = 0; // Contador acumulativo durante 60s
@@ -49,14 +43,14 @@ volatile uint8_t r_flag = 0;             // Flag de detección de pico
 
 // Variable de ppm
 volatile uint8_t ppm = 0;
-volatile uint8_t ppm_actualizado = 0;
 
 int main() {
   SystemInit();
 
-  arm_biquad_cascade_df1_init_f32(&iir_instance, NUM_STAGES, iir_coeffs, pState_iir); //Inicializa filtro
+  arm_biquad_cascade_df1_init_f32(&iir_instance, NUM_STAGES, iir_coeffs,
+                                  pState_iir); // Inicializa filtro
 
-  //Configura los módulos y periféricos
+  // Configura los módulos y periféricos
   configPCB();
   configGPIO();
   configUART();
@@ -65,15 +59,16 @@ int main() {
   configTimerADC();
   configGPDMA_UART(txBufferA);
 
-  //Habilita interrupciones
+  // Habilita interrupciones
   NVIC_EnableIRQ(ADC_IRQn);
   NVIC_EnableIRQ(TIMER2_IRQn);
 
   TIM_Cmd(LPC_TIM2, ENABLE);
 
-  while (1) {  }
+  while (1) {
+  }
 
-return 0;
+  return 0;
 }
 
 void ADC_IRQHandler(void) {
@@ -85,7 +80,8 @@ void ADC_IRQHandler(void) {
     // Procesamiento de la señal mediante filtro IIR
     fifoInputIIR[adcIndex] = (float32_t)adcRawData;
 
-    arm_biquad_cascade_df1_f32(&iir_instance, &fifoInputIIR[0] + adcIndex, &fifoOutputIIR[0] + adcIndex, 1);
+    arm_biquad_cascade_df1_f32(&iir_instance, &fifoInputIIR[0] + adcIndex,
+                               &fifoOutputIIR[0] + adcIndex, 1);
 
     // Escalado a 0–255
     float32_t scaled = fifoOutputIIR[adcIndex] * 255.0f / 4095.0f;
@@ -96,10 +92,6 @@ void ADC_IRQHandler(void) {
 
     // Redondeo
     uint8_t data_u8 = (uint8_t)(scaled + 0.5f);
-
-    //Almacenar en buffer circular para calcular el ppm
-    ppmBuffer[ppmBufferIndex] = data_u8;
-    ppmBufferIndex = (ppmBufferIndex + 1) % TX_BUFFER_SIZE;
 
     // --- Conteo de pulsos en tiempo real ---
     // Detectar flanco de subida
@@ -115,19 +107,16 @@ void ADC_IRQHandler(void) {
       r_flag = 0;
     }
 
-    // --- Ping Pong UART ---
-    if (fillIndex < TX_BUFFER_SIZE) {
-      txFillBuffer[fillIndex] = data_u8;
-      fillIndex++;
-    }
-
     adcIndex++;
     if (adcIndex >= TX_BUFFER_SIZE) {
       adcIndex = 0;
     }
 
-
-    if (fillIndex >= TX_BUFFER_SIZE) {
+    // --- Ping Pong UART ---
+    if (fillIndex < TX_BUFFER_SIZE) {
+      txFillBuffer[fillIndex] = data_u8;
+      fillIndex++;
+    } else {
       if (!dmaUartBusy) {
         // Buffer lleno y DMA libre
         uint8_t *txDMABuffer = (uint8_t *)txFillBuffer;
@@ -144,19 +133,18 @@ void ADC_IRQHandler(void) {
   }
 }
 
-
 void DMA_IRQHandler(void) {
 
   if (GPDMA_IntGetStatus(GPDMA_INT, GPDMA_CHANNEL_UART)) {
 
     if (GPDMA_IntGetStatus(GPDMA_INTTC, GPDMA_CHANNEL_UART)) {
       GPDMA_ClearIntPending(GPDMA_CLR_INTTC, GPDMA_CHANNEL_UART);
-      dmaUartBusy = 0; //Reinicia transferencia
+      dmaUartBusy = 0; // Reinicia transferencia
     }
 
     if (GPDMA_IntGetStatus(GPDMA_INTERR, GPDMA_CHANNEL_UART)) {
       GPDMA_ClearIntPending(GPDMA_CLR_INTERR, GPDMA_CHANNEL_UART);
-      dmaUartBusy = 0; //Reinicia transferencia
+      dmaUartBusy = 0; // Reinicia transferencia
     }
   }
 }
@@ -180,9 +168,6 @@ void TIMER2_IRQHandler(void) {
     } else {
       GPIO_SetPins(PORT_LED_RED, BIT_VALUE(PIN_LED_RED));
     }
-
-    // Flag para actualizar LED GREEN
-    ppm_actualizado = 1;
 
     TIM_ClearIntPending(LPC_TIM2, TIM_MR0_INT);
   }
