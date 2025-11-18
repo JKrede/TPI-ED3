@@ -154,43 +154,30 @@ void configADC(void) {
   ADC_IntConfig(ADC_CHANNEL_0, ENABLE);
 }
 
+/**
+ * @brief Configura el modulo UART para funcionar con el modulo de GPDMA
+ */
 void configUART(void) {
 
-  UART_CFG_Type cfgUART2;
-  UART_FIFO_CFG_Type cfgFIFO;
+    UART_CFG_Type      cfgUART2;
+    UART_FIFO_CFG_Type cfgFIFO;
 
-  LPC_SC->PCONP |= (1 << 24);
-  LPC_SC->PCLKSEL1 &= ~(3 << 16); // CCLK/4
+    UART_ConfigStructInit(&cfgUART2);
+    cfgUART2.Baud_rate = BAUD_RATE;
+    cfgUART2.Parity    = UART_PARITY_NONE;
+    cfgUART2.Databits  = UART_DATABIT_8;
+    cfgUART2.Stopbits  = UART_STOPBIT_1;
 
-  UART_ConfigStructInit(&cfgUART2);
-  cfgUART2.Baud_rate = 115200; // BAUD_RATE;
-  cfgUART2.Parity = UART_PARITY_NONE;
-  cfgUART2.Databits = UART_DATABIT_8;
-  cfgUART2.Stopbits = UART_STOPBIT_1;
+    UART_Init(LPC_UART2, &cfgUART2);
 
-  UART_Init(LPC_UART2, &cfgUART2);
+    UART_FIFOConfigStructInit(&cfgFIFO);
+    cfgFIFO.FIFO_DMAMode    = ENABLE;
+    cfgFIFO.FIFO_Level      = UART_FIFO_TRGLEV2;
+    cfgFIFO.FIFO_ResetRxBuf = ENABLE;
+    cfgFIFO.FIFO_ResetTxBuf = ENABLE;
+    UART_FIFOConfig(LPC_UART2, &cfgFIFO);
 
-  /*-------Override manual--------
-   * DL = 12, DIVADDVAL=2, MULVAL=15
-   * Baud = 114889 bps (error porcentual del 0,27%)*/
-  uint8_t lcr = LPC_UART2->LCR;
-
-  LPC_UART2->LCR = lcr | (1 << 7); // Divisor Latch Access Bit=1
-  // Habilitado para escribir en DLL y DLM/
-  LPC_UART2->DLL = 12;            // DL=12
-  LPC_UART2->DLM = 0;             // DL=12
-  LPC_UART2->FDR = (15 << 4) | 2; // Mulval y divaddval
-  // Deshabilito para usar la UART normalmente/
-  LPC_UART2->LCR = lcr & ~(1 << 7); // DLAB=0 ()
-
-  UART_FIFOConfigStructInit(&cfgFIFO);
-  cfgFIFO.FIFO_DMAMode = ENABLE;
-  cfgFIFO.FIFO_Level = UART_FIFO_TRGLEV2;
-  cfgFIFO.FIFO_ResetRxBuf = ENABLE;
-  cfgFIFO.FIFO_ResetTxBuf = ENABLE;
-  UART_FIFOConfig(LPC_UART2, &cfgFIFO);
-
-  UART_TxCmd(LPC_UART2, ENABLE);
+    UART_TxCmd(LPC_UART2, ENABLE);
 }
 /**
  * @brief Configura el modulo de GPDMA par funcionar con el modulo UART

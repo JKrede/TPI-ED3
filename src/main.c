@@ -5,7 +5,6 @@
 #include "lpc17xx_gpio.h"
 #include "lpc17xx_timer.h"
 #include "lpc17xx_uart.h"
-#include "util.h"
 #include <stdint.h>
 
 // Filtro IIR de 50Hz
@@ -39,7 +38,7 @@ volatile uint8_t dmaUartBusy = 0;
 volatile uint16_t adcIndex = 0;
 
 // Buffer circular para almacenar valores filtrados
-volatile uint8_t ppmBuffer[CANT_MUESTRAS];
+volatile uint8_t ppmBuffer[TX_BUFFER_SIZE];
 volatile uint16_t ppmBufferIndex = 0;
 
 // Variables para conteo de pulsos acumulativo
@@ -79,33 +78,8 @@ int main() {
       // Leer ppm de forma segura
       uint8_t ppm_local = ppm;
       ppm_actualizado = 0;
-
-      // Validar rango del PPM
-      if (ppm_local >= PPM_UMBRAL_MIN && ppm_local <= PPM_UMBRAL_MAX) {
-        // Calcular el match value basándose en el PPM actual
-        // uint32_t matchValue = TOGGLE_TIME(ppm_local);
-
-        // Validar que matchValue no sea demasiado pequeño
-        // if (matchValue >= 10) {
-        // Detener el timer antes de reconfigurar
-        //  TIM_Cmd(LPC_TIM1, DISABLE);
-
-        // Reconfigurar con el nuevo valor
-        //  configTimerBuzzer(matchValue);
-
-        // Reiniciar y arrancar el timer
-        //  TIM_ResetCounter(LPC_TIM1);
-        //  TIM_Cmd(LPC_TIM1, ENABLE);
-      } else {
-        // matchValue muy pequeño, detener buzzer
-        //  TIM_Cmd(LPC_TIM1, DISABLE);
-      }
-    } else {
-      // PPM fuera de rango, detener el buzzer
-      // TIM_Cmd(LPC_TIM1, DISABLE);
     }
   }
-}
 
 return 0;
 }
@@ -134,7 +108,7 @@ void ADC_IRQHandler(void) {
 
     // --- Almacenar en buffer circular ---
     ppmBuffer[ppmBufferIndex] = data_u8;
-    ppmBufferIndex = (ppmBufferIndex + 1) % CANT_MUESTRAS;
+    ppmBufferIndex = (ppmBufferIndex + 1) % TX_BUFFER_SIZE;
 
     // --- Conteo de pulsos en tiempo real ---
     // Detectar flanco de subida
