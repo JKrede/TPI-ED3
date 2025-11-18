@@ -15,6 +15,7 @@
 #include "lpc_types.h"
 #include <stdint.h>
 
+//Estructuras del DMA globales
 static GPDMA_LLI_Type lliUART = {0};
 static GPDMA_Channel_CFG_Type dmaUART = {0};
 
@@ -28,12 +29,12 @@ void configPCB(void) {
   PINSEL_CFG_Type cfg_TX_UART = {0};
   PINSEL_CFG_Type cfg_RX_UART = {0};
 
-  cfgPinLedG.portNum = PORT_BUZZER;
-  cfgPinLedG.pinNum = PIN_BUZZER;
+  cfgPinLedG.portNum = PORT_LED_GREEN;
+  cfgPinLedG.pinNum = PIN_LED_GREEN;
   cfgPinLedG.funcNum = FUNC_GPIO;
 
-  cfgPinLed.portNum = PORT_LED;
-  cfgPinLed.pinNum = PIN_LED;
+  cfgPinLed.portNum = PORT_LED_RED;
+  cfgPinLed.pinNum = PIN_LED_RED;
   cfgPinLed.funcNum = FUNC_GPIO;
 
   cfgADC.portNum = PORT_ADC;
@@ -62,42 +63,16 @@ void configPCB(void) {
  */
 void configGPIO(void) {
 
-  GPIO_SetDir(PORT_LED, BIT_VALUE(PIN_LED), OUTPUT);
-  GPIO_SetDir(PORT_BUZZER, BIT_VALUE(PIN_BUZZER), OUTPUT);
+  GPIO_SetDir(PORT_LED_RED, BIT_VALUE(PIN_LED_RED), OUTPUT);
+  GPIO_SetDir(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN), OUTPUT);
 
-  GPIO_ClearPins(PORT_LED, BIT_VALUE(PIN_LED));
-  GPIO_ClearPins(PORT_BUZZER, BIT_VALUE(PIN_BUZZER));
-}
-
-/**
- * @brief Configura el timer asociado al buzzer.
- *
- * @param matVal Valor de Match register(MR) a establecer
- *
- * @note: El valor a cargar en MR es (ppm/60)*1000*2
- */
-void configTimerBuzzer(uint32_t matVal) {
-
-  TIM_TIMERCFG_Type tim_extmat = {0};
-  TIM_MATCHCFG_Type mat_extmat = {0};
-
-  tim_extmat.prescaleOption = TIM_USVAL;
-  tim_extmat.prescaleValue = TIMER_PS_1MS;
-
-  mat_extmat.matchChannel = TIMER_CHANNEL_0;
-  mat_extmat.intOnMatch = DISABLE;
-  mat_extmat.resetOnMatch = ENABLE;
-  mat_extmat.stopOnMatch = DISABLE;
-  mat_extmat.extMatchOutputType = TIM_TOGGLE;
-  mat_extmat.matchValue = matVal;
-
-  TIM_Init(LPC_TIM1, TIM_TIMER_MODE, &tim_extmat);
-  TIM_ConfigMatch(LPC_TIM1, &mat_extmat);
+  GPIO_SetPins(PORT_LED_RED, BIT_VALUE(PIN_LED_RED));
+  GPIO_SetPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
 }
 
 /**
  * @brief Configura el timer destinado a interrumpir cada 1 minuto para
- * establecer la cantidad de ppm (pulsos por minuto)
+ * calcular la cantidad de ppm (pulsos por minuto)
  */
 void configTimerPPM(void) {
 
@@ -118,7 +93,7 @@ void configTimerPPM(void) {
 }
 
 /**
- * @brief Configura el timer del ADC para realizar el muestreo
+ * @brief Configura el timer del ADC para realizar el muestreo a 1 kHz
  *
  */
 void configTimerADC(void) {
@@ -142,7 +117,7 @@ void configTimerADC(void) {
   TIM_Cmd(LPC_TIM0, ENABLE);
 }
 /**
- * @brief Configura el modulo ADC
+ * @brief Configura el modulo ADC por trigger de MAT0 TMR1
  */
 void configADC(void) {
 
@@ -185,7 +160,7 @@ void configUART(void) {
  */
 void configGPDMA_UART(volatile uint8_t *txBuffer) {
 
-  GPDMA_Init(); // habilita el controlador DMA
+  GPDMA_Init();
 
   lliUART.nextLLI = 0;
 
@@ -201,19 +176,19 @@ void configGPDMA_UART(volatile uint8_t *txBuffer) {
 
 void startUART_DMA(uint8_t *buffer, volatile uint8_t *dmaUartBusy) {
 
-  // Configuramos el LLI para este bloque
+
   lliUART.srcAddr = (uint32_t)(uintptr_t)buffer;
   lliUART.dstAddr = (uint32_t)(uintptr_t)&LPC_UART2->THR;
-  lliUART.nextLLI = 0; // una sola transferencia
+  lliUART.nextLLI = 0;
 
-  lliUART.control = (TX_BUFFER_SIZE << 0) | // número de transfers
-                    (GPDMA_BSIZE_1 << 12) | // burst size fuente
-                    (GPDMA_BSIZE_1 << 15) | // burst size destino
-                    (GPDMA_BYTE << 18) |    // ancho fuente = 8 bits
-                    (GPDMA_BYTE << 21) |    // ancho destino = 8 bits
-                    (1 << 26) |             // incrementar dirección de fuente
-                    (0 << 27) | // NO incrementar destino (THR = fijo)
-                    (1 << 31);  // interrupción al final
+  lliUART.control = (TX_BUFFER_SIZE << 0) |
+                    (GPDMA_BSIZE_1 << 12) |
+                    (GPDMA_BSIZE_1 << 15) |
+                    (GPDMA_BYTE << 18) |
+                    (GPDMA_BYTE << 21) |
+                    (1 << 26) |
+                    (0 << 27) |
+                    (1 << 31);
 
   dmaUART.srcMemAddr = (uint32_t)(uintptr_t)buffer;
   dmaUART.transferSize = (uint32_t)TX_BUFFER_SIZE;

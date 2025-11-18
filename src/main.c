@@ -7,7 +7,7 @@
 #include "lpc17xx_uart.h"
 #include <stdint.h>
 
-// Filtro IIR de 50Hz
+// Filtro IIR Notch 50Hz Direct Form I Bicascada
 arm_biquad_casd_df1_inst_f32 iir_instance;
 static float32_t pState_iir[4 * NUM_STAGES];
 const float32_t b0 = B0;
@@ -23,10 +23,10 @@ float32_t iir_coeffs[5] = {b0, b1, b2, -a1, -a2};
 volatile float32_t fifoInputIIR[TX_BUFFER_SIZE];
 volatile float32_t fifoOutputIIR[TX_BUFFER_SIZE];
 
+
 // Buffer para DMA UART
 volatile uint8_t txBufferA[TX_BUFFER_SIZE];
 volatile uint8_t txBufferB[TX_BUFFER_SIZE];
-
 // puntero al buffer que se está llenando
 volatile uint8_t *txFillBuffer = txBufferA;
 // índice dentro del buffer que se está llenando
@@ -34,10 +34,11 @@ volatile uint16_t fillIndex = 0;
 // flag: DMA ocupada transmitiendo algún buffer
 volatile uint8_t dmaUartBusy = 0;
 
+
 // ADC
 volatile uint16_t adcIndex = 0;
 
-// Buffer circular para almacenar valores filtrados
+// Buffer para valores de ppm
 volatile uint8_t ppmBuffer[TX_BUFFER_SIZE];
 volatile uint16_t ppmBufferIndex = 0;
 
@@ -46,40 +47,31 @@ volatile uint16_t pulsos_acumulados = 0; // Contador acumulativo durante 60s
 volatile uint8_t ultimo_valor = 0;       // Para detectar flancos
 volatile uint8_t r_flag = 0;             // Flag de detección de pico
 
-// Variable de PPM (actualizada cada 60s)
+// Variable de ppm
 volatile uint8_t ppm = 0;
 volatile uint8_t ppm_actualizado = 0;
 
 int main() {
   SystemInit();
 
-  arm_biquad_cascade_df1_init_f32(&iir_instance, NUM_STAGES, iir_coeffs,
-                                  pState_iir);
+  arm_biquad_cascade_df1_init_f32(&iir_instance, NUM_STAGES, iir_coeffs, pState_iir); //Inicializa filtro
 
+  //Configura los módulos y periféricos
   configPCB();
   configGPIO();
   configUART();
   configADC();
-  // configTimerBuzzer(0);
   configTimerPPM();
   configTimerADC();
   configGPDMA_UART(txBufferA);
 
+  //Habilita interrupciones
   NVIC_EnableIRQ(ADC_IRQn);
   NVIC_EnableIRQ(TIMER2_IRQn);
 
-  // Iniciar el Timer2 para contar 60 segundos
   TIM_Cmd(LPC_TIM2, ENABLE);
 
-  while (1) {
-    // Actualizar buzzer cuando se actualice el PPM
-    if (ppm_actualizado) {
-
-      // Leer ppm de forma segura
-      uint8_t ppm_local = ppm;
-      ppm_actualizado = 0;
-    }
-  }
+  while (1) {  }
 
 return 0;
 }
@@ -93,8 +85,7 @@ void ADC_IRQHandler(void) {
     // Procesamiento de la señal mediante filtro IIR
     fifoInputIIR[adcIndex] = (float32_t)adcRawData;
 
-    arm_biquad_cascade_df1_f32(&iir_instance, &fifoInputIIR[0] + adcIndex,
-                               &fifoOutputIIR[0] + adcIndex, 1);
+    arm_biquad_cascade_df1_f32(&iir_instance, &fifoInputIIR[0] + adcIndex, &fifoOutputIIR[0] + adcIndex, 1);
 
     // Escalado a 0–255
     float32_t scaled = fifoOutputIIR[adcIndex] * 255.0f / 4095.0f;
@@ -106,25 +97,25 @@ void ADC_IRQHandler(void) {
     // Redondeo
     uint8_t data_u8 = (uint8_t)(scaled + 0.5f);
 
-    // --- Almacenar en buffer circular ---
+    //Almacenar en buffer circular para calcular el ppm
     ppmBuffer[ppmBufferIndex] = data_u8;
     ppmBufferIndex = (ppmBufferIndex + 1) % TX_BUFFER_SIZE;
 
     // --- Conteo de pulsos en tiempo real ---
     // Detectar flanco de subida
     if (data_u8 >= VAL_UMBRAL && !r_flag) {
-      GPIO_SetPins(PORT_BUZZER, BIT_VALUE(PIN_BUZZER));
+      GPIO_ClearPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
       pulsos_acumulados++;
       r_flag = 1;
     }
 
     // Detectar flanco de bajada para resetear detección
     if (data_u8 < VAL_UMBRAL && r_flag) {
-      GPIO_ClearPins(PORT_BUZZER, BIT_VALUE(PIN_BUZZER));
+      GPIO_SetPins(PORT_LED_GREEN, BIT_VALUE(PIN_LED_GREEN));
       r_flag = 0;
     }
 
-    // --- PING-PONG UART: escribir solo si hay lugar ---
+    // --- Ping Pong UART ---
     if (fillIndex < TX_BUFFER_SIZE) {
       txFillBuffer[fillIndex] = data_u8;
       fillIndex++;
@@ -135,9 +126,8 @@ void ADC_IRQHandler(void) {
       adcIndex = 0;
     }
 
-    // ¿Se llenó el buffer actual?
-    if (fillIndex >= TX_BUFFER_SIZE) {
 
+    if (fillIndex >= TX_BUFFER_SIZE) {
       if (!dmaUartBusy) {
         // Buffer lleno y DMA libre
         uint8_t *txDMABuffer = (uint8_t *)txFillBuffer;
@@ -154,24 +144,25 @@ void ADC_IRQHandler(void) {
   }
 }
 
+
 void DMA_IRQHandler(void) {
 
   if (GPDMA_IntGetStatus(GPDMA_INT, GPDMA_CHANNEL_UART)) {
 
     if (GPDMA_IntGetStatus(GPDMA_INTTC, GPDMA_CHANNEL_UART)) {
       GPDMA_ClearIntPending(GPDMA_CLR_INTTC, GPDMA_CHANNEL_UART);
-      dmaUartBusy = 0;
+      dmaUartBusy = 0; //Reinicia transferencia
     }
 
     if (GPDMA_IntGetStatus(GPDMA_INTERR, GPDMA_CHANNEL_UART)) {
       GPDMA_ClearIntPending(GPDMA_CLR_INTERR, GPDMA_CHANNEL_UART);
-      dmaUartBusy = 0;
+      dmaUartBusy = 0; //Reinicia transferencia
     }
   }
 }
 
 /**
- * @brief Handler cada 60 segundos para evaluar PPM y controlar LED
+ * @brief Handler cada 60 segundos para calcular ppm y controlar LED RED
  */
 void TIMER2_IRQHandler(void) {
 
@@ -180,20 +171,19 @@ void TIMER2_IRQHandler(void) {
     uint16_t pulsos = pulsos_acumulados;
     pulsos_acumulados = 0;
 
-    // Limitar PPM a 255 (máximo de uint8_t)
+    // Limita ppm a 255
     ppm = (pulsos > 255) ? 255 : (uint8_t)pulsos;
 
-    // Verificar si el PPM está fuera del rango normal
+    // Verifica si el PPM está fuera del rango normal
     if (ppm > PPM_UMBRAL_MAX || ppm < PPM_UMBRAL_MIN) {
-      GPIO_SetPins(PORT_LED, BIT_VALUE(PIN_LED));
+      GPIO_ClearPins(PORT_LED_RED, BIT_VALUE(PIN_LED_RED));
     } else {
-      GPIO_ClearPins(PORT_LED, BIT_VALUE(PIN_LED));
+      GPIO_SetPins(PORT_LED_RED, BIT_VALUE(PIN_LED_RED));
     }
 
-    // Marcar para actualizar buzzer
+    // Flag para actualizar LED GREEN
     ppm_actualizado = 1;
 
-    // Limpiar la interrupción
     TIM_ClearIntPending(LPC_TIM2, TIM_MR0_INT);
   }
 }

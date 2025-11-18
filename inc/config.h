@@ -1,23 +1,19 @@
 #include <stdint.h>
 
-// CONFIGURACION DEL SISTEMA
-#define BANK0_START 0x2007C000
-#define BANK0_MUESTRAS 0x20080000
-
 #define TX_BUFFER_SIZE 2048
 
-#define PPM_UMBRAL_MAX 180
-#define PPM_UMBRAL_MIN 30
+#define PPM_UMBRAL_MAX 100
+#define PPM_UMBRAL_MIN 60
 // Valor umbral para identificar el R-Peak. Valor ajustable
 // (255*60%)
 #define VAL_UMBRAL 153
 
 // CONFIGURACION PINES se cambia al 0 22 porque no funciono el buzzer
-#define PORT_BUZZER 3
-#define PIN_BUZZER 25
+#define PORT_LED_GREEN 3
+#define PIN_LED_GREEN 25
 
-#define PORT_LED 0
-#define PIN_LED 9
+#define PORT_LED_RED 0
+#define PIN_LED_RED 22
 
 // ADC_CHANNEL_0
 #define PORT_ADC 0
@@ -47,20 +43,9 @@
 #define TIMER_PS_1MS 1000
 #define TIMER_60S 60000
 
-/*
- * Ecuacion del Match Value:
- * - divide por 60 para tener el la cantidad de pps
- * - multiplica por 1000 para tener el resultado final en segundos (ms a s)
- * - divide por 2 dado que se requieren 2 toogles para un periodo
- */
-#define TOGGLE_TIME(ppm) (ppm * 1000 / (60 * 2))
-
 // Canales de Match
 #define TIMER_CHANNEL_1 1 // Usando en ADC
-#define TIMER_CHANNEL_0 0 // Usando en T1 para buzzer y en T2 para ppm
-
-// CONFIGURACION ADC
-#define FREQ_MUESTREO 1000 // En Hz
+#define TIMER_CHANNEL_0 0 // Usado en T2 para ppm
 
 // CONFIGURACION UART
 #define BAUD_RATE 9600
@@ -69,11 +54,11 @@
 #define GPDMA_CHANNEL_ADC 0
 #define GPDMA_CHANNEL_UART 1
 
-// Filter IIR
+// Filtro IIR de 1 etapa y un block size de 1 para filtrado en tiempo real
 #define NUM_STAGES 1
 #define BLOCK_SIZE 1
 
-// Coeficientes
+// Coeficientes del IIR
 #define G 0.9875889421f
 #define B0 (G * 1.0f)
 #define B1 (G * -1.902263284f)
@@ -84,7 +69,6 @@
 // PROTOTIPOS DE FUNCIONES
 void configPCB(void);
 void configGPIO(void);
-void configTimerBuzzer(uint32_t matVal);
 void configTimerPPM(void);
 void configTimerADC(void);
 void configADC(void);
