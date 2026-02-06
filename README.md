@@ -9,7 +9,7 @@ Este repositorio contiene el diseño de hardware, firmware y software para un si
 El sistema está diseñado para capturar la actividad eléctrica cardíaca, eliminar ruidos característicos (como la interferencia de línea de 50Hz) y presentar los datos gráficamente.
 
 **Diagrama de Bloques del Sistema:**
-![Diagrama de Bloques](./doc/img/Diagrama-de-bloques.pdf)
+![Diagrama de Bloques](./doc/img/Diagrama-de-bloques.png)
 
 ### Características Principales
 * **Derivación:** II (Brazo derecho - Pierna izquierda).
@@ -21,6 +21,8 @@ El sistema está diseñado para capturar la actividad eléctrica cardíaca, elim
 ---
 
 ## Arquitectura del Hardware
+
+![Sistema electrónico](./doc/img/sistema_electronico.jpg)
 
 El AFE (Analog Front End) está diseñado para amplificar señales del orden de los milivoltios y rechazar ruido de modo común.
 
@@ -82,3 +84,6 @@ Aplicación de escritorio desarrollada en **Python** utilizando el framework **P
 ├── gui/                # Script de Python para aplicación y dependencias
 ├── docs/               # Informe y documentación adicional
 └── README.md
+```
+
+*Este proyecto fue desarrollado con fines académicos para la cátedra de Electrónica Digital III.*
