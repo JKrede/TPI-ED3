@@ -22,8 +22,6 @@ El sistema está diseñado para capturar la actividad eléctrica cardíaca, elim
 
 ## Arquitectura del Hardware
 
-![Sistema electrónico](./doc/img/sistema_electronico.jpg)
-
 El AFE (Analog Front End) está diseñado para amplificar señales del orden de los milivoltios y rechazar ruido de modo común.
 
 1.  **Etapa de Adquisición:**
@@ -40,6 +38,8 @@ El AFE (Analog Front End) está diseñado para amplificar señales del orden de 
     * **VGA (Variable Gain Amplifier):** Ajuste de ganancia final para maximizar el rango dinámico del ADC (0 - 3.3V).
 5.  **Alimentación:**
     * Fuente simétrica de $\pm 4.5$V derivada de baterías Li-Ion (11.1V) y reguladores lineales.
+
+![Sistema electrónico](./doc/img/sistema_electronico.jpg)
 
 ---
 
@@ -68,7 +68,7 @@ Aplicación de escritorio desarrollada en **Python** utilizando el framework **P
 * **Backend:** Utiliza una DLL externa (`Osc_DLL64.dll`) para la renderización del osciloscopio virtual.
 * **Cálculos:** Estimación de frecuencia cardíaca y FFT en la interfaz.
 
-![Captura del Software](./doc/img/scope_running.png)
+![Captura del Software](./doc/img/scope.png)
 
 ---
 
