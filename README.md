@@ -68,7 +68,7 @@ Aplicación de escritorio desarrollada en **Python** utilizando el framework **P
 * **Backend:** Utiliza una DLL externa (`Osc_DLL64.dll`) para la renderización del osciloscopio virtual.
 * **Cálculos:** Estimación de frecuencia cardíaca y FFT en la interfaz.
 
-![Captura del Software](./doc/img/scope_running.png)
+![Captura del Software](./doc/img/scope.png)
 
 ---
 
