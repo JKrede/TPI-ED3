@@ -1,6 +1,6 @@
 # Sistema de Adquisición, Conversión y Procesamiento de Señal ECG
 
-**Trabajo Práctico Integrador - Electrónica Digital III** **Universidad Nacional de Córdoba - FCEFyN** **Año:** 2026
+**Trabajo Práctico Integrador - Electrónica Digital III** **Universidad Nacional de Córdoba - FCEFyN** **Año:** 2025
 
 Este repositorio contiene el diseño de hardware, firmware y software para un sistema de electrocardiografía (ECG) digital de una derivación (Derivación II). El sistema adquiere la señal bioeléctrica, la acondiciona analógicamente, la procesa digitalmente en un microcontrolador LPC1769 y la transmite a una PC para su visualización en tiempo real mediante una aplicación desarrollada en python.
 
